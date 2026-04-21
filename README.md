@@ -27,7 +27,7 @@ Use a local `.env` file with this shape:
 OPENAI_API_KEY=your_openai_key
 OPENAI_CHAT_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-SQL_SERVER_CONNECTION_STRING=Driver={ODBC Driver 18 for SQL Server};Server=OREN_KNIAZ_LT;Database=Tech;Trusted_Connection=yes;Encrypt=yes;TrustServerCertificate=yes
+SQL_SERVER_CONNECTION_STRING=your_sql_server_connection_string
 CHROMA_PERSIST_DIR=./chroma_db
 ```
 
