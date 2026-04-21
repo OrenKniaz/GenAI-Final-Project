@@ -3,3 +3,4 @@
 .env
 __pycache__/
 *.pyc
+Docs/Assignment/project.md
