@@ -22,6 +22,34 @@ Available slots:
 (3136, datetime.date(2024, 1, 2), datetime.time(12, 0), 'ML')
 ```
 
+## Streamlit Checkpoint
+
+- Date: 2026-04-23
+- Command: `$env:PYTHONPATH="C:\\GenAI Final Project"; streamlit run streamlit_app/streamlit_main.py`
+- Status: Passed
+
+### Output
+
+```text
+Recruiting Chatbot Stub
+Enter a candidate message
+
+I don't want to talk bye
+
+Action: end
+
+let's schedule something ha
+
+Action: schedule
+
+Available slots
+(1, datetime.date(2024, 1, 2), datetime.time(9, 0), 'Python Dev')
+(4, datetime.date(2024, 1, 2), datetime.time(9, 0), 'ML')
+(2089, datetime.date(2024, 1, 2), datetime.time(11, 0), 'Python Dev')
+(3134, datetime.date(2024, 1, 2), datetime.time(12, 0), 'Sql Dev')
+(3136, datetime.date(2024, 1, 2), datetime.time(12, 0), 'ML')
+```
+
 ## Update Rule
 
 - Add a new checkpoint entry here whenever the backend or database verification changes.

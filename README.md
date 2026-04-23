@@ -21,7 +21,8 @@ The app uses:
 - `app/main.py` is ready and prints the loaded config values, routes a sample message, and only calls SQL when the action is scheduling.
 - The backend smoke test now loads config, runs the router, and only calls SQL when the router returns a scheduling action.
 - Chroma is planned later, but it is not wired in yet.
-- The Streamlit UI and agent logic are still to be built.
+- `streamlit_app/streamlit_main.py` is the first Streamlit UI slice and uses the same router as the backend smoke test.
+- Streamlit currently runs with `PYTHONPATH="C:\\GenAI Final Project"` so the `app` package can be imported from the repo root.
 
 ## `.env` Format
 
@@ -48,5 +49,6 @@ The `.env` file itself is ignored by Git.
 
 - The config module is the single place that reads environment variables.
 - `app/main.py` is still a small startup/smoke test entry point.
+- `streamlit_app/streamlit_main.py` is the current frontend entrypoint for the demo UI.
 - `app/modules/agent_router.py` is a temporary rule-based coordinator for the first agent slice.
 - Chroma will be added later when the retrieval part of the bot is built.
