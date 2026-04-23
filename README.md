@@ -15,7 +15,8 @@ The app uses:
 
 - `.env` is set up locally.
 - `app/config.py` is ready and loads environment settings.
-- `app/main.py` is ready and prints the loaded config values.
+- `app/modules/Helpers/sql_helper.py` is ready and tested against the `Tech` database.
+- `app/main.py` is ready and prints the loaded config values plus available interview slots.
 - Chroma is planned later, but it is not wired in yet.
 - The Streamlit UI and agent logic are still to be built.
 
