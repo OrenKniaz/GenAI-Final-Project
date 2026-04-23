@@ -1,5 +1,11 @@
 # This router defines all the 3 main agent actions: CONTINUE, SCHEDULE, and END.
+# and decides which action to take based on advisors response.
 from enum import Enum 
+
+# import advisors to help decide action.
+from app.modules.exit_advisor import should_end
+from app.modules.info_advisor import should_provide_info
+from app.modules.schedule_advisor import should_schedule
 
 # Define an enumeration for the possible actions the agent can take.
 class Action(str, Enum): 
@@ -7,18 +13,20 @@ class Action(str, Enum):
     SCHEDULE = "schedule"
     END = "end"
 
-# A simple function that decides which action to take based on the message. 
-# It looks for keywords related to scheduling or ending the conversation.
+# A simple function that decides which action to take based on the advisors' responses. 
 
-# Note, this is temporary and very basic skeleton code.
 def decide_action(message: str) -> Action:
-    text = message.lower()
-
-    if "schedule" in text or "interview" in text or "time" in text:
-        return Action.SCHEDULE
-
-    if "bye" in text or "stop" in text or "not interested" in text:
+    # check ending advisor
+    if should_end(message):
         return Action.END
+
+    # check scheduling advisor
+    if should_schedule(message):
+         return Action.SCHEDULE
+
+    # check info advisor
+    if should_provide_info(message):
+        return Action.CONTINUE
 
     return Action.CONTINUE
 

@@ -16,9 +16,10 @@ The app uses:
 - `.env` is set up locally.
 - `app/config.py` is ready and loads environment settings.
 - `app/modules/Helpers/sql_helper.py` is ready and tested against the `Tech` database.
-- `app/modules/agent_router.py` is ready as a basic skeleton router with CONTINUE, SCHEDULE, and END actions.
-- `app/main.py` is ready and prints the loaded config values plus available interview slots.
-- The backend smoke test now loads config, routes a sample message, and only calls SQL when the action is scheduling.
+- `app/modules/agent_router.py` is now wired to the three advisors and returns CONTINUE, SCHEDULE, or END.
+- `app/modules/exit_advisor.py`, `app/modules/schedule_advisor.py`, and `app/modules/info_advisor.py` are in place as the first advisor layer.
+- `app/main.py` is ready and prints the loaded config values, routes a sample message, and only calls SQL when the action is scheduling.
+- The backend smoke test now loads config, runs the router, and only calls SQL when the router returns a scheduling action.
 - Chroma is planned later, but it is not wired in yet.
 - The Streamlit UI and agent logic are still to be built.
 
@@ -46,6 +47,6 @@ The `.env` file itself is ignored by Git.
 ## Notes
 
 - The config module is the single place that reads environment variables.
-- `app/main.py` is only a small startup check for now.
-- `app/modules/agent_router.py` is a temporary rule-based router for the first agent slice.
+- `app/main.py` is still a small startup/smoke test entry point.
+- `app/modules/agent_router.py` is a temporary rule-based coordinator for the first agent slice.
 - Chroma will be added later when the retrieval part of the bot is built.
