@@ -1,7 +1,6 @@
 import streamlit as st
 
-from app.modules.Helpers.sql_helper import get_available_slots
-from app.modules.agent_router import Action, decide_action
+from app.modules.conversation_service import process_candidate_turn
 
 # Simple Streamlit entrypoint for the first UI slice.
 st.title("Recruiting Chatbot Stub")
@@ -13,13 +12,13 @@ if st.button("Run"):
     if not message.strip():
         st.warning("Please enter a message.")
     else:
-        # Reuse the same router that main.py uses for the smoke test.
-        action = decide_action(message)
-        st.write("Action:", action.value)
+        # use conversation_service to check the message and decide what to respond.
+        result = process_candidate_turn(message)
+        st.write("Action:", result.action)
+        st.write("Assistant Message:", result.assistant_message)
 
-        if action == Action.SCHEDULE:
+        if result.show_slots and result.slots:
             # Show slots only when the router asks for scheduling.
-            slots = get_available_slots()
             st.subheader("Available slots")
-            for slot in slots:
+            for slot in result.slots:
                 st.write(slot)

@@ -18,10 +18,12 @@ The app uses:
 - `app/modules/Helpers/sql_helper.py` is ready and tested against the `Tech` database.
 - `app/modules/agent_router.py` is now wired to the three advisors and returns CONTINUE, SCHEDULE, or END.
 - `app/modules/exit_advisor.py`, `app/modules/schedule_advisor.py`, and `app/modules/info_advisor.py` are in place as the first advisor layer.
+- `app/modules/conversation_service.py` now packages a single candidate turn into a structured backend result.
 - `app/main.py` is ready and prints the loaded config values, routes a sample message, and only calls SQL when the action is scheduling.
 - The backend smoke test now loads config, runs the router, and only calls SQL when the router returns a scheduling action.
 - Chroma is planned later, but it is not wired in yet.
-- `streamlit_app/streamlit_main.py` is the first Streamlit UI slice and uses the same router as the backend smoke test.
+- `streamlit_app/streamlit_main.py` now calls `process_candidate_turn()` so the UI uses the same backend turn contract end-to-end.
+- The first unit test for the conversation service is in `tests/Code testing/test_conversation_service.py`.
 - Streamlit currently runs with `PYTHONPATH="C:\\GenAI Final Project"` so the `app` package can be imported from the repo root.
 
 ## `.env` Format
@@ -52,3 +54,18 @@ The `.env` file itself is ignored by Git.
 - `streamlit_app/streamlit_main.py` is the current frontend entrypoint for the demo UI.
 - `app/modules/agent_router.py` is a temporary rule-based coordinator for the first agent slice.
 - Chroma will be added later when the retrieval part of the bot is built.
+
+## Testing
+
+Run the first unit test from the repo root:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest "tests/Code testing/test_conversation_service.py"
+```
+
+Run the Streamlit demo from the repo root:
+
+```powershell
+$env:PYTHONPATH="C:\GenAI Final Project"
+streamlit run streamlit_app/streamlit_main.py
+```
