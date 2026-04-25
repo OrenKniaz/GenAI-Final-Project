@@ -13,12 +13,17 @@ The app uses:
 
 ## Current Status
 
+- Phase 1 baseline architecture is complete.
 - `.env` is set up locally.
-- `app/config.py` is ready and loads environment settings.
-- `app/modules/Helpers/sql_helper.py` is ready and tested against the `Tech` database.
-- `app/main.py` is ready and prints the loaded config values plus available interview slots.
-- Chroma is planned later, but it is not wired in yet.
-- The Streamlit UI and agent logic are still to be built.
+- `app/config.py` loads environment settings.
+- `app/modules/Helpers/sql_helper.py` connects to the `Tech` database and returns available slots.
+- `app/modules/agent_router.py` explicitly evaluates the exit, schedule, and info advisors and exposes both `route_message()` and `decide_action()`.
+- `app/modules/conversation_service.py` now uses a shared turn contract, tracks the current role across turns, and normalizes `Python Developer` to the SQL-facing `Python Dev` value.
+- `app/main.py` and `streamlit_app/streamlit_main.py` both go through the same `process_candidate_turn()` backend flow.
+- Backend smoke verification passes.
+- Streamlit smoke verification passes.
+- `tests/Code testing/test_conversation_service.py` now covers schedule, end, continue, advisor precedence, role detection, role normalization, carried-forward role state, and neutral follow-up behavior.
+- Chroma, retrieval, and OpenAI-backed advisors are planned for later phases.
 
 ## `.env` Format
 
@@ -44,5 +49,23 @@ The `.env` file itself is ignored by Git.
 ## Notes
 
 - The config module is the single place that reads environment variables.
-- `app/main.py` is only a small startup check for now.
+- `app/main.py` is still a small startup/smoke test entry point.
+- `streamlit_app/streamlit_main.py` is the current frontend entrypoint for the demo UI.
+- `app/modules/agent_router.py` is a temporary rule-based coordinator for the first agent slice.
+- `workplan.md` is now tracked in git and reflects phase and slice status.
 - Chroma will be added later when the retrieval part of the bot is built.
+
+## Testing
+
+Run the conversation service test suite from the repo root:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest "tests/Code testing/test_conversation_service.py"
+```
+
+Run the Streamlit demo from the repo root:
+
+```powershell
+$env:PYTHONPATH="C:\GenAI Final Project"
+streamlit run streamlit_app/streamlit_main.py
+```
