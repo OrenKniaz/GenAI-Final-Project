@@ -1,6 +1,5 @@
 from app.config import get_settings # Import the get_settings function from the config module to load configuration settings.
-from app.modules.Helpers.sql_helper import get_available_slots
-from app.modules.agent_router import Action, decide_action
+from app.modules.conversation_service import process_candidate_turn, CandidateTurnInput
 
 
 def main() -> None:
@@ -11,15 +10,14 @@ def main() -> None:
     print("Embedding model:", settings.openai_embedding_model)
     print("Chroma dir:", settings.chroma_persist_dir)
 
-    # Use our simple agent router to decide what action to take based on a test message. This simulates how the agent would process user input and determine the next step.
-    action = decide_action("Can we schedule an interview?")
-    print("Decided action:", action)
+    # Use our simple agent router to decide what action to take based on a test message. 
+    turn = CandidateTurnInput(message="Can we schedule an interview?")
+    result = process_candidate_turn(turn)
     
     # If the action is SCHEDULE, call the SQL helper to retrieve and print available interview slots.
-    if action == Action.SCHEDULE:
-        slots = get_available_slots()
+    if result.show_slots and result.slots:
         print("Available slots:")
-        for slot in slots:
+        for slot in result.slots:
             print(slot)
         
 

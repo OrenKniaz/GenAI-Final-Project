@@ -3,5 +3,4 @@
 .env
 __pycache__/
 *.pyc
-workplan.md
 Docs/Assignment/project.md
