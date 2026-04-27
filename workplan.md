@@ -72,10 +72,11 @@ Status: `Done`
 ### Phase 2: Make The Streamlit Demo Actually Conversational
 Status: `TBD`
 
-1. `TBD` Add `st.session_state` chat history so the demo is multi-turn instead of one-shot.
-2. `TBD` Display the conversation as recruiter/candidate turns rather than raw field output only.
-3. `TBD` Pass recent conversation history into `process_candidate_turn()`.
-4. `TBD` Add one test for a follow-up turn that depends on previous context.
+1. `Done` Add `st.session_state` chat history so the demo is multi-turn instead of one-shot.
+2. `Done` Display the conversation as recruiter/candidate turns rather than raw field output only.
+3. `Done` Pass recent conversation history into `process_candidate_turn()`.
+4. `Done` Make the backend meaningfully consume passed conversation history, not just carry UI state through the turn contract.
+5. `Done` Add one test for a follow-up turn that depends on previous context after backend history consumption exists.
 
 ### Phase 3: First Real Info Advisor With OpenAI
 Status: `TBD`
@@ -224,7 +225,7 @@ Use two parallel workers after Phase 1. Each worker develops on a separate featu
 
 ### Worker A: Conversation And UX Track
 
-- Phase 2: `In progress` Own `st.session_state`, chat rendering, and the frontend side of passing history.
+- Phase 2: `Done` Own `st.session_state`, chat rendering, and the frontend side of passing history.
 - Phase 3: `TBD` Own job-description loading, prompt wording, and info-answer shaping.
 - Phase 6: `TBD` Own time-expression parsing and confirmation wording.
 - Phase 9: `TBD` Own retrieval prompt integration and answer comparison.
@@ -233,7 +234,7 @@ Use two parallel workers after Phase 1. Each worker develops on a separate featu
 
 ### Worker B: Routing, Data, And Evaluation Track
 
-- Phase 2: `In progress` Own the backend history contract and the follow-up test coverage.
+- Phase 2: `Done` Own backend history consumption and the follow-up test coverage.
 - Phase 4: `TBD` Own exit-advisor prompt, fallback behavior, and tests.
 - Phase 5: `TBD` Own scheduling decision logic, role-aware SQL filtering, and slot formatting.
 - Phase 7: `TBD` Own document extraction and reusable storage.

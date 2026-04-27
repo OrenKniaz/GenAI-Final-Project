@@ -67,6 +67,18 @@ class TestConversationService(unittest.TestCase):
         self.assertEqual(result.role, "Python Developer")
         self.assertEqual(result.normalized_role, "Python Dev")
 
+    def test_role_can_be_recovered_from_history(self):
+        result = process_candidate_turn(
+            CandidateTurnInput(
+                message="Can we schedule an interview?",
+                history=["I am interested in the Python Developer role"],
+                role=None,
+            )
+        )
+    
+        self.assertEqual(result.role, "Python Developer")
+        self.assertEqual(result.normalized_role, "Python Dev")
+
 
 if __name__ == "__main__":
     unittest.main()

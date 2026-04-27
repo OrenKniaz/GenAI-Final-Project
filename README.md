@@ -14,15 +14,17 @@ The app uses:
 ## Current Status
 
 - Phase 1 baseline architecture is complete.
+- Phase 2 conversational Streamlit flow is complete.
 - `.env` is set up locally.
 - `app/config.py` loads environment settings.
 - `app/modules/Helpers/sql_helper.py` connects to the `Tech` database and returns available slots.
 - `app/modules/agent_router.py` explicitly evaluates the exit, schedule, and info advisors and exposes both `route_message()` and `decide_action()`.
-- `app/modules/conversation_service.py` now uses a shared turn contract, tracks the current role across turns, and normalizes `Python Developer` to the SQL-facing `Python Dev` value.
+- `app/modules/conversation_service.py` now uses a shared turn contract, tracks the current role across turns, normalizes `Python Developer` to the SQL-facing `Python Dev` value, and can recover role context from prior history.
 - `app/main.py` and `streamlit_app/streamlit_main.py` both go through the same `process_candidate_turn()` backend flow.
+- `streamlit_app/streamlit_main.py` now preserves multi-turn chat history in `st.session_state`, renders candidate and assistant turns in chat-style UI, and passes prior history and role state back into the backend on each turn.
 - Backend smoke verification passes.
 - Streamlit smoke verification passes.
-- `tests/Code testing/test_conversation_service.py` now covers schedule, end, continue, advisor precedence, role detection, role normalization, carried-forward role state, and neutral follow-up behavior.
+- `tests/Code testing/test_conversation_service.py` now covers schedule, end, continue, advisor precedence, role detection, role normalization, carried-forward role state, neutral follow-up behavior, and role recovery from history.
 - Chroma, retrieval, and OpenAI-backed advisors are planned for later phases.
 
 ## `.env` Format
