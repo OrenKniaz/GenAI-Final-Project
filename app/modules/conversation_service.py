@@ -8,6 +8,8 @@ from typing import Optional
 from app.modules.Helpers.sql_helper import get_available_slots
 from app.modules.agent_router import Action, decide_action
 
+from app.modules.info_advisor import generate_info_response
+
 
 @dataclass(frozen=True) 
 class CandidateTurnInput:
@@ -72,14 +74,20 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
             slots=slot_text,
             show_slots=True,
         )
+    # Actual LLM response function call to get the reposnse where "more info \ continue " is needed.
+    info_response = generate_info_response(
+    message=turn.message,
+    role=resolved_role,
+    history=turn.history,
+)
 
     return CandidateTurnResult(
         action=action.value,
-        assistant_message="Thanks. Let me keep the conversation going and gather more details.",
+        assistant_message=info_response,
         role=resolved_role,
         normalized_role=normalized_role,
         show_slots=False,
-    )
+)
 
 # make sure role detection from single message is part of the context for future turns.
 def detect_role_from_history(history: list[str]) -> str | None:

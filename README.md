@@ -15,17 +15,21 @@ The app uses:
 
 - Phase 1 baseline architecture is complete.
 - Phase 2 conversational Streamlit flow is complete.
+- Phase 3 info-advisor work is in progress.
 - `.env` is set up locally.
 - `app/config.py` loads environment settings.
 - `app/modules/Helpers/sql_helper.py` connects to the `Tech` database and returns available slots.
 - `app/modules/agent_router.py` explicitly evaluates the exit, schedule, and info advisors and exposes both `route_message()` and `decide_action()`.
-- `app/modules/conversation_service.py` now uses a shared turn contract, tracks the current role across turns, normalizes `Python Developer` to the SQL-facing `Python Dev` value, and can recover role context from prior history.
+- `app/modules/conversation_service.py` now uses a shared turn contract, tracks the current role across turns, normalizes `Python Developer` to the SQL-facing `Python Dev` value, recovers role context from prior history, and sends `continue` turns through the OpenAI-backed info advisor.
+- `app/modules/Helpers/llm_helper.py` centralizes `ChatOpenAI` construction.
+- `app/modules/Helpers/history_helper.py` formats shared conversation history for advisor prompts.
+- `app/modules/info_advisor.py` now uses LangChain/OpenAI to generate role answers with its own system prompt, few-shot examples, and shared conversation-history context.
 - `app/main.py` and `streamlit_app/streamlit_main.py` both go through the same `process_candidate_turn()` backend flow.
-- `streamlit_app/streamlit_main.py` now preserves multi-turn chat history in `st.session_state`, renders candidate and assistant turns in chat-style UI, and passes prior history and role state back into the backend on each turn.
+- `streamlit_app/streamlit_main.py` now preserves multi-turn chat history in `st.session_state`, renders candidate and assistant turns in chat-style UI, shows the latest candidate message immediately, and displays an assistant-side `Thinking...` spinner while the model response is generated.
 - Backend smoke verification passes.
-- Streamlit smoke verification passes.
+- Streamlit manual verification passes, including contextual follow-up behavior through the info advisor.
 - `tests/Code testing/test_conversation_service.py` now covers schedule, end, continue, advisor precedence, role detection, role normalization, carried-forward role state, neutral follow-up behavior, and role recovery from history.
-- Chroma, retrieval, and OpenAI-backed advisors are planned for later phases.
+- Chroma, retrieval, and grounded job-description answers are planned for later phases.
 
 ## `.env` Format
 

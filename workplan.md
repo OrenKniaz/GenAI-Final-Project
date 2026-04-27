@@ -70,7 +70,7 @@ Status: `Done`
 7. `Done` Add one test for a neutral follow-up that should stay on `continue`.
 
 ### Phase 2: Make The Streamlit Demo Actually Conversational
-Status: `TBD`
+Status: `Done`
 
 1. `Done` Add `st.session_state` chat history so the demo is multi-turn instead of one-shot.
 2. `Done` Display the conversation as recruiter/candidate turns rather than raw field output only.
@@ -79,15 +79,17 @@ Status: `TBD`
 5. `Done` Add one test for a follow-up turn that depends on previous context after backend history consumption exists.
 
 ### Phase 3: First Real Info Advisor With OpenAI
-Status: `TBD`
+Status: `In Progress`
 
-1. `TBD` Create a small LangChain/OpenAI integration slice for the info advisor only.
+1. `Done` Create a small LangChain/OpenAI integration slice for the info advisor only.
 2. `TBD` Load the job description content as the source of truth for role-related answers.
-3. `TBD` Replace the rule-based info advisor with an OpenAI-backed answer generator.
-4. `TBD` Add prompt instructions so the info advisor answers role questions and gently drives toward scheduling.
-5. `TBD` Add a few few-shot examples for common candidate questions.
-6. `TBD` Make the main agent still return `continue` while the info advisor generates the response text.
-7. `TBD` Add a smoke test or verification note for a real role-question answer grounded in the job description.
+3. `Done` Replace the rule-based info advisor with an OpenAI-backed answer generator.
+4. `Done` Add prompt instructions so the info advisor answers role questions and gently drives toward scheduling.
+5. `Done` Add a few few-shot examples for common candidate questions.
+6. `Done` Make the main agent still return `continue` while the info advisor generates the response text.
+7. `Done` Add a smoke test or verification note for a real role-question answer from the OpenAI-backed info advisor.
+8. `Done` Add a shared recent-history prompt formatter so all advisors can receive consistent conversation context.
+9. `Done` Update the info advisor to use shared conversation history for contextual follow-up questions.
 
 ### Phase 4: Strengthen The Exit Advisor
 Status: `TBD`

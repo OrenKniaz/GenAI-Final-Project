@@ -18,7 +18,7 @@ if "current_role" not in st.session_state:
 for turn_entry in st.session_state.chat_history:
     chat_role = "user" if turn_entry["speaker"] == "candidate" else "assistant"
     with st.chat_message(chat_role):
-        st.write(f"{turn_entry['speaker'].title()}: {turn_entry['text']}")
+        st.write(turn_entry['text'])
         if turn_entry.get("slots"):
             for slot in turn_entry["slots"]:
                 st.write(slot)
@@ -36,9 +36,17 @@ if st.button("Run"):
             history=history,
             role=st.session_state.current_role,
         )
+        with st.chat_message("user"):
+            st.write(message)
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."): # Show some loading state while processing the message for better UX....
+                result = process_candidate_turn(turn)
 
-        # use conversation_service to check the message and decide what to respond.
-        result = process_candidate_turn(turn)
+            st.write(result.assistant_message)
+
+            if result.show_slots and result.slots:
+                for slot in result.slots:
+                    st.write(slot)
 
         # Append to chat history for context in future turns.
         new_entries = [
