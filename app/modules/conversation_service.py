@@ -50,7 +50,7 @@ def normalize_role(role: str | None) -> str | None:
 # Based on the action decided by the agenr router, construct the class CandidateTurnResult written above
 def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
     action = decide_action(turn.message)
-    resolved_role = detect_role(turn.message) or turn.role # either get role from message (first priority) or use role from history
+    resolved_role = detect_role(turn.message) or turn.role or detect_role_from_history(turn.history)# either get role from message (first priority) or use role from history
     normalized_role = normalize_role(resolved_role) # normalize role to match SQL fields if needed.
     if action == Action.END:
         return CandidateTurnResult(
@@ -80,4 +80,12 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
         normalized_role=normalized_role,
         show_slots=False,
     )
+
+# make sure role detection from single message is part of the context for future turns.
+def detect_role_from_history(history: list[str]) -> str | None:
+    for entry in reversed(history):
+        detected_role = detect_role(entry)
+        if detected_role:
+            return detected_role
+    return None
 
