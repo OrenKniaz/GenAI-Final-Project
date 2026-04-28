@@ -34,14 +34,18 @@ The project should use all three important data sources in the repo, not just th
 3. `Database/Job descriptions/Python Developer Job Description.pdf`
 	This is the knowledge source for answering candidate questions about the role, and later for embeddings plus Chroma retrieval.
 
-## Current Baseline
+## Current Prototype Status
 
 - Environment/config loading works.
 - SQL availability lookup works.
-- Rule-based router exists for `continue`, `schedule`, and `end`.
-- Streamlit single-turn demo works.
 - `conversation_service.py` packages a single turn result.
-- First unit test exists for the service layer.
+- Streamlit multi-turn chat state works.
+- Shared conversation history formatting exists.
+- An OpenAI-backed info advisor prototype exists and can use history.
+- An OpenAI-backed router prototype exists, but it does not yet match the assignment's consult-all-advisors orchestration flow.
+- An OpenAI-backed exit advisor prototype exists, but it is not yet fully integrated into the final main-agent loop.
+- The role is still mostly inferred from conversation text; the assignment-aligned intake-form role capture is not implemented yet.
+- Unit tests exist for the service layer and current prototype routing behavior.
 
 ## A+ Outcome
 
@@ -56,82 +60,91 @@ It should demonstrate:
 - measurable evaluation results on the provided labeled data
 - clear documentation of what was built and how it performs
 
+## Reference Architecture
+
+The implementation target should follow the assignment-aligned one-turn flow documented in:
+
+- `Docs/Assignment/one_turn_flow_mermaid.md`
+
+That reference flow takes precedence over earlier prototype assumptions when the two disagree.
+
 ## Slices
 
-### Phase 1: Lock The Baseline Architecture
-Status: `Done`
+### Phase 1: Shared Foundations And Known Role Setup
+Status: `In progress`
 
 1. `Done` Align `app/main.py` with `conversation_service.py` so the backend smoke flow matches Streamlit.
-2. `Done` Add a tiny shared conversation-turn input/output contract that can later carry history cleanly.
-3. `Done` Make the main flow explicitly call exit, schedule, and info advisors in one place.
-4. `Done` Add role tracking to conversation state so the system knows which role the candidate is discussing.
-5. `Done` Normalize role names between conversation text and SQL positions, for example `Python Developer` to `Python Dev`.
-6. `Done` Add one test for advisor precedence when a message could match more than one action.
-7. `Done` Add one test for a neutral follow-up that should stay on `continue`.
+2. `Done` Add a shared conversation-turn input/output contract that can carry message, role, and history.
+3. `Done` Add `st.session_state` chat history so the demo is multi-turn instead of one-shot.
+4. `Done` Pass recent conversation history through the backend turn contract.
+5. `Done` Add a shared conversation-history formatter for advisor prompts.
+6. `Done` Normalize role names between user-facing role text and SQL positions, for example `Python Developer` to `Python Dev`.
+7. `TBD` Start the conversation from an intake or registration form that captures the role before chat begins.
+8. `TBD` Replace role inference as the primary source of truth with known role state from the intake flow.
 
-### Phase 2: Make The Streamlit Demo Actually Conversational
-Status: `Done`
-
-1. `Done` Add `st.session_state` chat history so the demo is multi-turn instead of one-shot.
-2. `Done` Display the conversation as recruiter/candidate turns rather than raw field output only.
-3. `Done` Pass recent conversation history into `process_candidate_turn()`.
-4. `Done` Make the backend meaningfully consume passed conversation history, not just carry UI state through the turn contract.
-5. `Done` Add one test for a follow-up turn that depends on previous context after backend history consumption exists.
-
-### Phase 3: First Real Info Advisor With OpenAI
-Status: `In Progress`
-
-1. `Done` Create a small LangChain/OpenAI integration slice for the info advisor only.
-2. `TBD` Load the job description content as the source of truth for role-related answers.
-3. `Done` Replace the rule-based info advisor with an OpenAI-backed answer generator.
-4. `Done` Add prompt instructions so the info advisor answers role questions and gently drives toward scheduling.
-5. `Done` Add a few few-shot examples for common candidate questions.
-6. `Done` Make the main agent still return `continue` while the info advisor generates the response text.
-7. `Done` Add a smoke test or verification note for a real role-question answer from the OpenAI-backed info advisor.
-8. `Done` Add a shared recent-history prompt formatter so all advisors can receive consistent conversation context.
-9. `Done` Update the info advisor to use shared conversation history for contextual follow-up questions.
-
-### Phase 4: Strengthen The Exit Advisor
+### Phase 2: Shared Advisor Feedback Contracts
 Status: `TBD`
 
-1. `TBD` Replace the exit advisor keyword rule with an OpenAI-backed exit decision prompt.
-2. `TBD` Add examples for disinterest, polite rejection, and ambiguous cases.
-3. `TBD` Keep a lightweight fallback rule for obvious stop/bye/not-interested messages.
-4. `TBD` Add tests for clear exit, clear continue, and ambiguous phrasing.
+1. `TBD` Define structured advisor outputs for exit feedback, info feedback, and scheduling feedback.
+2. `TBD` Make the existing advisors return structured feedback instead of owning the final turn result directly.
+3. `TBD` Keep the final action enum and final user-facing decision at the main-agent layer.
+4. `TBD` Add one integration test showing that structured advisor outputs can be composed in a single turn.
 
-### Phase 5: Strengthen The Scheduling Advisor
+### Phase 3: Info Advisor To Assignment Shape
+Status: `In progress`
+
+1. `Done` Create a small LangChain/OpenAI integration slice for the info advisor.
+2. `Done` Add prompt instructions so the info advisor answers role questions and can guide the candidate toward scheduling.
+3. `Done` Add a few few-shot examples for common candidate questions.
+4. `Done` Make the info advisor consume shared conversation history for contextual follow-up questions.
+5. `Done` Add a smoke test or verification note for a real role-question answer from the OpenAI-backed info advisor.
+6. `TBD` Change the info advisor from a direct final responder into a structured advisor that returns `info_needed` plus draft reply content to the main agent.
+7. `TBD` Load the job description content as the source of truth for supported role information.
+8. `TBD` Add verification that supported role facts come from the job description pipeline rather than free-form model knowledge.
+
+### Phase 4: Exit Advisor To Assignment Shape
+Status: `In progress`
+
+1. `Done` Replace the exit keyword rule with an OpenAI-backed exit confirmation prompt.
+2. `Done` Add clear exit, clear continue, and ambiguous examples.
+3. `Done` Make the exit advisor consume shared conversation history.
+4. `TBD` Add a safe fallback when structured output is malformed or the model call fails.
+5. `TBD` Integrate the exit advisor into the consult-all-advisors main-agent loop.
+6. `TBD` Add tests for clear exit, clear continue, and ambiguous phrasing through the final main-agent flow.
+
+### Phase 5: Scheduling Advisor To Assignment Shape
 Status: `TBD`
 
-1. `TBD` Replace the current schedule keyword rule with a better scheduling decision prompt.
-2. `TBD` Make the scheduling advisor use the detected role before querying SQL.
+1. `TBD` Create an OpenAI-backed scheduling advisor that returns `schedule_match` plus optional scheduling guidance.
+2. `TBD` Make the scheduling advisor use the known role from intake state before it queries SQL.
 3. `TBD` Filter SQL availability by `position` so the candidate is matched to the correct role slots.
 4. `TBD` Return only the nearest 3 available slots from SQL, matching the assignment wording.
-5. `TBD` Format slots into human-readable strings for the demo.
-6. `TBD` Add tests that schedule responses contain at most 3 suggested slots.
-7. `TBD` Add one verification case where a scheduling-type message reaches the SQL-backed path.
+5. `TBD` Format slot suggestions into human-readable strings for the main agent to present.
+6. `TBD` Add tests that scheduling feedback contains at most 3 suggested slots.
+7. `TBD` Add one verification case where a scheduling-type turn reaches the SQL-backed scheduling advisor path.
 
 ### Phase 6: Candidate-Proposed Time Handling
 Status: `TBD`
 
-1. `TBD` Add a small parser or extraction step for candidate-proposed time phrases like `Friday at 11` or `next Monday`.
-2. `TBD` Interpret proposed times relative to the conversation date when possible.
-3. `TBD` Check whether the proposed slot exists in SQL for the detected role.
-4. `TBD` If the slot exists, confirm it.
-5. `TBD` If the slot does not exist, return the nearest 3 alternatives for that role.
+1. `TBD` Add a parser or extraction step for candidate-proposed time phrases like `Friday at 11` or `next Monday`.
+2. `TBD` Interpret proposed times relative to the conversation timestamp when possible.
+3. `TBD` Check whether the proposed slot exists in SQL for the known role.
+4. `TBD` If the proposed slot exists, confirm it.
+5. `TBD` If the proposed slot does not exist, return the nearest 3 alternatives for that role.
 6. `TBD` Add tests for requested-time available and requested-time unavailable cases.
 
 ### Phase 7: Job Description Ingestion
 Status: `TBD`
 
-1. `TBD` Locate and load the Python job description PDF or source material used for role answers.
-2. `TBD` Add a one-time script/module to extract text from the document.
-3. `TBD` Save the extracted content in a reusable form for embeddings and debugging.
+1. `TBD` Locate and load the Python job description PDF used for role answers.
+2. `TBD` Add a one-time script or module to extract text from the document.
+3. `TBD` Save the extracted content in a reusable form for debugging, prompting, and embeddings.
 4. `TBD` Add a quick verification step that the extracted text is readable and complete enough.
 
 ### Phase 8: Offline Embeddings And Chroma
 Status: `TBD`
 
-1. `TBD` Create the offline embedding slice using OpenAI embeddings.
+1. `TBD` Create the offline embedding step using OpenAI embeddings.
 2. `TBD` Store the embedded chunks in Chroma using the configured persist directory.
 3. `TBD` Add chunking logic appropriate for a single job description document.
 4. `TBD` Add a verification script that builds the Chroma collection successfully.
@@ -142,19 +155,21 @@ Status: `TBD`
 
 1. `TBD` Add a retrieval step from Chroma for role-related candidate questions.
 2. `TBD` Feed retrieved context into the info advisor prompt.
-3. `TBD` Compare the pre-RAG info answers with the retrieval-backed answers.
-4. `TBD` Tune chunking/retrieval settings if answers are weak or hallucinated.
-5. `TBD` Add a couple of verification cases for retrieval-backed job-detail questions.
+3. `TBD` Compare pre-RAG info answers with retrieval-backed answers.
+4. `TBD` Tune chunking and retrieval settings if answers are weak or hallucinated.
+5. `TBD` Add verification cases for retrieval-backed job-detail questions.
 
-### Phase 10: Main Agent Via LangChain Structure
+### Phase 10: Main-Agent Orchestration And Re-Consult Loop
 Status: `TBD`
 
-1. `TBD` Refactor the current router so it looks like a real main agent orchestrating the three advisors.
-2. `TBD` Decide whether the main agent itself is LLM-driven or rule-plus-advisor driven for the scoped project.
-3. `TBD` If using LangChain orchestration, make the advisor calls explicit and traceable.
-4. `TBD` Ensure the main agent’s final action is still always one of `continue`, `schedule`, or `end`.
-5. `TBD` Ensure the main agent keeps role context available to the scheduling path.
-6. `TBD` Add one end-to-end verification case for each action.
+1. `TBD` Make the main agent own the full turn loop and the final action decision for every message.
+2. `TBD` Make the main agent consult Exit, Info, and Scheduling advisors on every turn using shared context.
+3. `TBD` Make advisor calls explicit and traceable in LangChain or the chosen orchestration layer.
+4. `TBD` Make the main agent synthesize advisor outputs into the final `continue`, `schedule`, or `end` decision.
+5. `TBD` Make the main agent own the final candidate-facing response, even when advisor draft content is used.
+6. `TBD` Add a second-pass advisor consultation path when the first advisor outputs are insufficient or conflicting.
+7. `TBD` Ensure the main agent can pass clarified reasoning when it consults advisors again.
+8. `TBD` Add one end-to-end verification case for each final action.
 
 ### Phase 11: Dataset Evaluation Pipeline
 Status: `TBD`
@@ -188,11 +203,12 @@ Status: `TBD`
 ### Phase 14: Streamlit Demo Polish
 Status: `TBD`
 
-1. `TBD` Improve the Streamlit layout so it feels like a recruiter chat demo, not a raw debug page.
+1. `TBD` Polish the intake form or dropdown so the known role capture feels like a natural chat entry step.
 2. `TBD` Show assistant replies in a cleaner chat format.
 3. `TBD` Show scheduling suggestions clearly, including role-aware slot suggestions.
 4. `TBD` Add a way to reset the conversation.
 5. `TBD` Make sure the demo works for `continue`, `schedule`, and `end` flows.
+6. `TBD` Make sure the UI reflects main-agent orchestration rather than a single-advisor shortcut.
 
 ### Phase 15: README And Submission Quality
 Status: `TBD`
@@ -227,8 +243,9 @@ Use two parallel workers after Phase 1. Each worker develops on a separate featu
 
 ### Worker A: Conversation And UX Track
 
-- Phase 2: `Done` Own `st.session_state`, chat rendering, and the frontend side of passing history.
-- Phase 3: `TBD` Own job-description loading, prompt wording, and info-answer shaping.
+- Phase 2: `TBD` Own chat rendering and frontend alignment with the new main-agent orchestration flow.
+- Phase 1: `TBD` Own intake-form role capture and known-role UX.
+- Phase 3: `TBD` Own job-description loading, prompt wording, retrieval context, and info-answer shaping.
 - Phase 6: `TBD` Own time-expression parsing and confirmation wording.
 - Phase 9: `TBD` Own retrieval prompt integration and answer comparison.
 - Phase 12: `TBD` Own the required evaluation notebook.
@@ -236,7 +253,7 @@ Use two parallel workers after Phase 1. Each worker develops on a separate featu
 
 ### Worker B: Routing, Data, And Evaluation Track
 
-- Phase 2: `Done` Own backend history consumption and the follow-up test coverage.
+- Phase 2: `TBD` Own structured advisor outputs and shared advisor-result contracts.
 - Phase 4: `TBD` Own exit-advisor prompt, fallback behavior, and tests.
 - Phase 5: `TBD` Own scheduling decision logic, role-aware SQL filtering, and slot formatting.
 - Phase 7: `TBD` Own document extraction and reusable storage.
@@ -256,23 +273,22 @@ Use two parallel workers after Phase 1. Each worker develops on a separate featu
 ## If Time Gets Tight
 
 The minimum slices that still align well with the assignment are:
-1. Real OpenAI-backed info advisor.
-2. Role detection and normalization for scheduling.
-3. Better scheduling advisor with nearest 3 SQL slots.
-4. Multi-turn Streamlit chat history.
-5. Offline embeddings into Chroma.
-6. Retrieval-backed info answers.
-7. Evaluation pipeline with accuracy and confusion matrix.
-8. README cleanup.
+1. Intake form with known role captured before chat starts.
+2. Main agent that consults all three advisors and owns the final `continue` / `schedule` / `end` decision.
+3. OpenAI-backed info advisor that can answer role questions and guide toward scheduling.
+4. OpenAI-backed exit advisor that confirms end vs continue.
+5. Scheduling advisor that uses role-aware SQL and returns the nearest 3 slots.
+6. Evaluation pipeline with accuracy and confusion matrix.
+7. README cleanup.
 
 ## Suggested Next Slice
 
 The best next slice from the current state is:
 
-1. Create the first real OpenAI-backed info advisor.
+1. Add intake-form role capture so the conversation starts with a known role in state.
 
 Reason:
-- it starts the actual GenAI part of the project
-- it is smaller than full scheduling-time parsing
-- it moves the project away from pure stubs quickly
-- it gives a visible improvement in the Streamlit demo
+- it matches the very start of the assignment diagram
+- it removes avoidable role ambiguity before advisor orchestration becomes more complex
+- it simplifies scheduling, retrieval, and testing because the role is known from the first turn
+- it is a smaller and cleaner correction slice than full orchestration refactor

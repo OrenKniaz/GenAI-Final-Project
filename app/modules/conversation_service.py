@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from app.modules.Helpers.sql_helper import get_available_slots
-from app.modules.agent_router import Action, decide_action
+from app.modules.agent_router import Action, route_message
 
 from app.modules.info_advisor import generate_info_response
 
@@ -51,8 +51,8 @@ def normalize_role(role: str | None) -> str | None:
 
 # Based on the action decided by the agenr router, construct the class CandidateTurnResult written above
 def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
-    action = decide_action(turn.message)
     resolved_role = detect_role(turn.message) or turn.role or detect_role_from_history(turn.history)# either get role from message (first priority) or use role from history
+    action = route_message(turn.message, resolved_role, turn.history)
     normalized_role = normalize_role(resolved_role) # normalize role to match SQL fields if needed.
     if action == Action.END:
         return CandidateTurnResult(
