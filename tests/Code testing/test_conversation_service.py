@@ -79,6 +79,53 @@ class TestConversationService(unittest.TestCase):
         self.assertEqual(result.role, "Python Developer")
         self.assertEqual(result.normalized_role, "Python Dev")
 
+    def test_interested_without_schedule_stays_on_continue(self):
+        result = process_candidate_turn(
+        CandidateTurnInput(message="I'm interested")
+    )
 
+        self.assertEqual(result.action, "continue")
+        self.assertFalse(result.show_slots)
+        self.assertIsNone(result.slots)
+
+
+    def test_interested_in_interview_routes_to_schedule(self):
+        result = process_candidate_turn(
+            CandidateTurnInput(message="I'm interested in interviewing for this role")
+        )
+
+        self.assertEqual(result.action, "schedule")
+        self.assertTrue(result.show_slots)
+        self.assertIsNotNone(result.slots)
+
+
+    def test_interested_goodbye_routes_to_end(self):
+        result = process_candidate_turn(
+            CandidateTurnInput(message="I'm interested, goodbye")
+        )
+
+        self.assertEqual(result.action, "end")
+        self.assertFalse(result.show_slots)
+        self.assertIsNone(result.slots)
+
+
+    def test_polite_delay_stays_on_continue(self):
+        result = process_candidate_turn(
+            CandidateTurnInput(message="Maybe later, can you tell me more first?")
+        )
+
+        self.assertEqual(result.action, "continue")
+        self.assertFalse(result.show_slots)
+        self.assertIsNone(result.slots)
+
+
+    def test_clear_exit_phrase_routes_to_end(self):
+        result = process_candidate_turn(
+            CandidateTurnInput(message="Please stop messaging me")
+        )
+
+        self.assertEqual(result.action, "end")
+        self.assertFalse(result.show_slots)
+        self.assertIsNone(result.slots)
 if __name__ == "__main__":
     unittest.main()
