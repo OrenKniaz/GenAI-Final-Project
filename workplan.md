@@ -72,7 +72,7 @@ That reference flow takes precedence over earlier prototype assumptions when the
 ## Slices
 
 ### Phase 1: Shared Foundations And Known Role Setup
-Status: `In progress`
+Status: `Done`
 
 1. `Done` Align `app/main.py` with `conversation_service.py` so the backend smoke flow matches Streamlit.
 2. `Done` Add a shared conversation-turn input/output contract that can carry message, role, and history.
@@ -81,7 +81,7 @@ Status: `In progress`
 5. `Done` Add a shared conversation-history formatter for advisor prompts.
 6. `Done` Normalize role names between user-facing role text and SQL positions, for example `Python Developer` to `Python Dev`.
 7. `Done` Start the conversation from an intake or registration form that captures the role before chat begins.
-8. `TBD` Replace role inference as the primary source of truth with known role state from the intake flow.
+8. `Done` Replace role inference as the primary source of truth with known role state from the intake flow.
 
 ### Phase 2: Shared Advisor Feedback Contracts
 Status: `TBD`

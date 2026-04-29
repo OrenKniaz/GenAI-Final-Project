@@ -11,7 +11,7 @@ def main() -> None:
     print("Chroma dir:", settings.chroma_persist_dir)
 
     # Use our simple agent router to decide what action to take based on a test message. 
-    turn = CandidateTurnInput(message="Can we schedule an interview?")
+    turn = CandidateTurnInput(message="Can we schedule an interview?", role="Python Developer")
     result = process_candidate_turn(turn)
     
     # If the action is SCHEDULE, call the SQL helper to retrieve and print available interview slots.
