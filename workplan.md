@@ -44,7 +44,8 @@ The project should use all three important data sources in the repo, not just th
 - An OpenAI-backed info advisor prototype exists and can use history.
 - An OpenAI-backed router prototype exists, but it does not yet match the assignment's consult-all-advisors orchestration flow.
 - An OpenAI-backed exit advisor prototype exists, but it is not yet fully integrated into the final main-agent loop.
-- The role is still mostly inferred from conversation text; the assignment-aligned intake-form role capture is not implemented yet.
+- Streamlit now starts with an intake form that captures first name, last name, and role before chat begins.
+- The backend still allows role changes from chat text during the conversation, so intake role is not yet the only source of truth.
 - Unit tests exist for the service layer and current prototype routing behavior.
 
 ## A+ Outcome
@@ -79,7 +80,7 @@ Status: `In progress`
 4. `Done` Pass recent conversation history through the backend turn contract.
 5. `Done` Add a shared conversation-history formatter for advisor prompts.
 6. `Done` Normalize role names between user-facing role text and SQL positions, for example `Python Developer` to `Python Dev`.
-7. `TBD` Start the conversation from an intake or registration form that captures the role before chat begins.
+7. `Done` Start the conversation from an intake or registration form that captures the role before chat begins.
 8. `TBD` Replace role inference as the primary source of truth with known role state from the intake flow.
 
 ### Phase 2: Shared Advisor Feedback Contracts
