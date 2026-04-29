@@ -5,18 +5,13 @@ from app.modules.Helpers.llm_helper import build_chat_llm
 
 from app.modules.Helpers.history_helper import format_conversation_history
 
-# Function to decide if need to return more info, for now basic decision not agentic decision yet.
-def should_provide_info(message: str) -> bool:
-    text = message.lower()
-    if "info" in text or "information" in text or "details" in text:
-        return True
-    return False
-
 # function to generate the info reponse based on message\role\history
 def generate_info_response(
     message: str,
     role: str | None = None,
     history: list[str] | None = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
 ) -> str:
     
     
@@ -24,6 +19,7 @@ def generate_info_response(
 
     role_text = role or "the role"
     history_text = format_conversation_history(history or [])
+    candidate_name = " ".join(part for part in [first_name, last_name] if part) or "the candidate"
     
     messages = [  # not only system\user, inclued also "few shot learning\promption"
         SystemMessage(
@@ -33,6 +29,7 @@ def generate_info_response(
                 "If the question is about the role, answer at a high level.\n"
                 "Do not invent company-specific facts.\n"
                 "If you are unsure, say you do not have confirmed details.\n"
+                "When a candidate first name is provided, you may use it naturally for a light personal touch, but not in every sentence.\n"
                 "When appropriate, gently encourage the candidate toward next steps such as scheduling."
         )
     ),
@@ -66,6 +63,7 @@ def generate_info_response(
 
         HumanMessage(
             content=(
+                f"Candidate: {candidate_name}\n"
                 f"Role: {role_text}\n"
                 f"{history_text}\n"
                 f"Candidate question: {message}"
@@ -74,7 +72,10 @@ def generate_info_response(
     ]
 
     response = llm.invoke(messages)
-    return response.content
+    if isinstance(response.content, str):
+        return response.content
+
+    return str(response.content)
 
 
 if __name__ == "__main__":

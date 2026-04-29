@@ -16,6 +16,8 @@ class CandidateTurnInput:
     message: str  # The  last message from the candidate that we want to process. 
     history: list[str] = field(default_factory=list) # Conversation history up to this point.
     role: str | None = None # The role of the candidate to help agents provide the correct info\schedule the correct interview type.
+    first_name: str | None = None # Candidate first name from the intake flow.
+    last_name: str | None = None # Candidate last name from the intake flow.
 
 @dataclass(frozen=True) # immutable to ensure consistency in the conversation\response.
 class CandidateTurnResult:
@@ -25,6 +27,13 @@ class CandidateTurnResult:
     normalized_role: str | None = None # The normalized role extracted from the message to help with slot filling and info retrieval (match SQL).
     slots: list[str] | None = None # Optional list of available slots if the action is SCHEDULE.
     show_slots: bool = False # A flag to indicate whether the UI should show the available slots (if schedule)
+
+
+def personalize_assistant_message(message: str, first_name: str | None) -> str:
+    if not first_name:
+        return message
+
+    return f"{first_name}, {message}"
 
 
 
@@ -57,7 +66,10 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
     if action == Action.END:
         return CandidateTurnResult(
             action=action.value,
-            assistant_message="Understood. We will end the conversation.",
+            assistant_message=personalize_assistant_message(
+                "Understood. We will end the conversation.",
+                turn.first_name,
+            ),
             role=resolved_role,
             normalized_role=normalized_role,
             show_slots=False,
@@ -68,7 +80,10 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
         slot_text = [str(slot) for slot in slots]
         return CandidateTurnResult(
             action=action.value,
-            assistant_message="Great, here are some available interview slots.",
+            assistant_message=personalize_assistant_message(
+                "Great, here are some available interview slots.",
+                turn.first_name,
+            ),
             role=resolved_role,
             normalized_role=normalized_role,
             slots=slot_text,
@@ -76,10 +91,12 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
         )
     # Actual LLM response function call to get the reposnse where "more info \ continue " is needed.
     info_response = generate_info_response(
-    message=turn.message,
-    role=resolved_role,
-    history=turn.history,
-)
+        message=turn.message,
+        role=resolved_role,
+        history=turn.history,
+        first_name=turn.first_name,
+        last_name=turn.last_name,
+    )
 
     return CandidateTurnResult(
         action=action.value,
