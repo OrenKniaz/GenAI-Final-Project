@@ -36,16 +36,6 @@ def personalize_assistant_message(message: str, first_name: str | None) -> str:
     return f"{first_name}, {message}"
 
 
-
-# Simple and temp role detection based on keywords in the message.
-def detect_role(message: str) -> str | None:
-    text = message.lower()
-
-    if "python developer" in text or "python dev" in text:
-        return "Python Developer"
-
-    return None
-
 # A simple normalization function to map different variations of role names to the SQL fields in db.
 # For now , just Python Dev . later needs to be agentic...
 def normalize_role(role: str | None) -> str | None:
@@ -60,7 +50,7 @@ def normalize_role(role: str | None) -> str | None:
 
 # Based on the action decided by the agenr router, construct the class CandidateTurnResult written above
 def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
-    resolved_role = detect_role(turn.message) or turn.role or detect_role_from_history(turn.history)# either get role from message (first priority) or use role from history
+    resolved_role = turn.role  # role comes from intake form; not inferred from message text
     action = route_message(turn.message, resolved_role, turn.history)
     normalized_role = normalize_role(resolved_role) # normalize role to match SQL fields if needed.
     if action == Action.END:
@@ -106,11 +96,4 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
         show_slots=False,
 )
 
-# make sure role detection from single message is part of the context for future turns.
-def detect_role_from_history(history: list[str]) -> str | None:
-    for entry in reversed(history):
-        detected_role = detect_role(entry)
-        if detected_role:
-            return detected_role
-    return None
 

@@ -13,15 +13,17 @@ The app uses:
 
 ## Current Status
 
-- Phase 1 shared foundations are mostly complete, including the Slice 7 intake flow.
+- Phase 1 shared foundations are complete, including the Slice 7 intake flow and Slice 8 role authority.
 - Streamlit now starts with an intake form that captures first name, last name, and role before chat begins.
+- The intake-provided role is the only source of truth; the backend never infers role from message text.
 - The chat UI preserves multi-turn history and uses a fixed bottom chat input with lightweight UI polish.
+- A sidebar shows the current role and allows changing it through an explicit selectbox control.
 - Phase 3 info-advisor work is in progress.
 - `.env` is set up locally.
 - `app/config.py` loads environment settings.
 - `app/modules/Helpers/sql_helper.py` connects to the `Tech` database and returns available slots.
 - `app/modules/agent_router.py` contains the current prototype routing logic and exposes `route_message()`.
-- `app/modules/conversation_service.py` now uses a shared turn contract, carries intake-provided role and candidate name data, normalizes `Python Developer` to the SQL-facing `Python Dev` value, recovers role context from prior history, and sends `continue` turns through the OpenAI-backed info advisor.
+- `app/modules/conversation_service.py` now uses a shared turn contract, carries intake-provided role and candidate name data, normalizes `Python Developer` to the SQL-facing `Python Dev` value, treats the intake role as authoritative (no inference from message text), and sends `continue` turns through the OpenAI-backed info advisor.
 - `app/modules/Helpers/llm_helper.py` centralizes `ChatOpenAI` construction.
 - `app/modules/Helpers/history_helper.py` formats shared conversation history for advisor prompts.
 - `app/modules/info_advisor.py` now uses LangChain/OpenAI to generate role answers with its own system prompt, few-shot examples, shared conversation-history context, and optional candidate-name personalization.
@@ -29,8 +31,7 @@ The app uses:
 - `streamlit_app/streamlit_main.py` now preserves multi-turn chat history in `st.session_state`, captures intake details before chat, renders candidate and assistant turns in chat-style UI, shows the latest candidate message immediately, and displays an assistant-side `Thinking...` spinner while the model response is generated.
 - Backend smoke verification passes.
 - Streamlit manual verification passes, including contextual follow-up behavior through the info advisor.
-- `tests/Code testing/test_conversation_service.py` now covers schedule, end, continue, advisor precedence, role detection, role normalization, carried-forward role state, neutral follow-up behavior, and role recovery from history.
-- The backend still allows role changes from chat text during the conversation; making intake role the primary source of truth is a later slice.
+- `tests/Code testing/test_conversation_service.py` now covers schedule, end, continue, advisor precedence, role normalization, carried-forward role state, neutral follow-up behavior, and the Slice 8 contract that intake role is used as-is and message text cannot change the resolved role.
 - Chroma, retrieval, and grounded job-description answers are planned for later phases.
 
 ## `.env` Format

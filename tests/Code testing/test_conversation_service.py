@@ -38,18 +38,6 @@ class TestConversationService(unittest.TestCase):
         self.assertFalse(result.show_slots)
         self.assertIsNone(result.slots)
 
-    def test_role_is_detected_from_message(self):
-        result = process_candidate_turn(
-        CandidateTurnInput(message="I am interested in the Python Developer role"))
-
-        self.assertEqual(result.role, "Python Developer")
-
-    def test_python_developer_role_is_normalized(self):
-        result = process_candidate_turn(
-        CandidateTurnInput(message="I am interested in the Python Developer role"))
-
-        self.assertEqual(result.role, "Python Developer")
-        self.assertEqual(result.normalized_role, "Python Dev")
 
     def test_existing_role_is_carried_forward_and_normalized(self):
         result = process_candidate_turn(
@@ -64,18 +52,6 @@ class TestConversationService(unittest.TestCase):
         self.assertEqual(result.action, "continue")
         self.assertFalse(result.show_slots)
         self.assertIsNone(result.slots)
-        self.assertEqual(result.role, "Python Developer")
-        self.assertEqual(result.normalized_role, "Python Dev")
-
-    def test_role_can_be_recovered_from_history(self):
-        result = process_candidate_turn(
-            CandidateTurnInput(
-                message="Can we schedule an interview?",
-                history=["I am interested in the Python Developer role"],
-                role=None,
-            )
-        )
-    
         self.assertEqual(result.role, "Python Developer")
         self.assertEqual(result.normalized_role, "Python Dev")
 
@@ -127,5 +103,22 @@ class TestConversationService(unittest.TestCase):
         self.assertEqual(result.action, "end")
         self.assertFalse(result.show_slots)
         self.assertIsNone(result.slots)
+
+    def test_intake_role_is_used_and_normalized(self):
+        # Slice 8: role comes from intake, not from message text
+        result = process_candidate_turn(
+            CandidateTurnInput(message="Can we schedule an interview?", role="Python Developer")
+        )
+        self.assertEqual(result.role, "Python Developer")
+        self.assertEqual(result.normalized_role, "Python Dev")
+
+    def test_no_intake_role_means_no_resolved_role(self):
+        # Slice 8: without an intake role, result.role is None regardless of message content
+        result = process_candidate_turn(
+            CandidateTurnInput(message="I am interested in the Python Developer role", role=None)
+        )
+        self.assertIsNone(result.role)
+        self.assertIsNone(result.normalized_role)
+    
 if __name__ == "__main__":
     unittest.main()

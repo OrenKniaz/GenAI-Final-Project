@@ -22,18 +22,6 @@ st.markdown(
     .page-offset {
         height: 7rem;
     }
-    .role-badge {
-        position: fixed;
-        bottom: 1.2rem;
-        left: 50%;
-        transform: translateX(-10rem);
-        z-index: 999;
-        background: white;
-        border: 1px solid #dddddd;
-        border-radius: 999px;
-        padding: 0.35rem 0.75rem;
-        font-size: 0.9rem;
-    }
     </style>
     <div class="sticky-banner">Recruiting Chatbot Stub</div>
     <div class="page-offset"></div>
@@ -57,8 +45,6 @@ if "last_name" not in st.session_state:
 
 if "intake_complete" not in st.session_state:
     st.session_state.intake_complete = False
-
-role_text = st.session_state.current_role or "Not selected"
 
 if not st.session_state.intake_complete:
     st.subheader("Application form")
@@ -91,11 +77,14 @@ else:
                 for slot in turn_entry["slots"]:
                     st.write(slot)
 
-    # render banner
-    st.markdown(
-        f'<div class="role-badge">Role: {role_text}</div>',
-        unsafe_allow_html=True,
-    )
+    # option to change role during chat (for example pythong and ml engineer not sure if he wants to apply for the one or the other..)
+    st.sidebar.title("Recruiting Chatbot")
+    available_roles = ["Python Developer"]
+    current_index = available_roles.index(st.session_state.current_role) if st.session_state.current_role in available_roles else 0
+    selected_role_in_chat = st.sidebar.selectbox("Applying for", available_roles, index=current_index, key="role_change_select")
+    if selected_role_in_chat != st.session_state.current_role:
+        st.session_state.current_role = selected_role_in_chat
+        st.rerun()
 
     message = st.chat_input("Enter a candidate message")
     
