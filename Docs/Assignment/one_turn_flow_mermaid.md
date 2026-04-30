@@ -6,9 +6,10 @@ Key interpretation choices:
 - The candidate starts from an intake/registration form before the chat begins.
 - The role should be known at chat start, preferably from a dropdown or controlled input.
 - The main agent orchestrates every turn.
-- Advisors return structured feedback to the main agent.
-- The main agent synthesizes advisor outputs into the final user-facing action and response.
-- The main agent may consult one or more advisors again if the first pass is not sufficient.
+- The main agent routes to exactly one advisor per pass, chosen based on the current message and context.
+- The chosen advisor returns structured feedback to the main agent.
+- If the main agent is not confident after the first advisor response, it can loop back and route to another advisor, passing additional context explaining why it needs more input.
+- The main agent owns the final action and the final candidate-facing response.
 
 ```mermaid
 flowchart TD
@@ -24,39 +25,42 @@ flowchart TD
     G --> G3[Current message]
     G --> G4[Conversation time metadata]
 
-    G --> H[Consult Exit Advisor]
-    G --> I[Consult Info Advisor]
-    G --> J[Consult Scheduling Advisor]
+    G --> ROUTE{Decides 1 out of 3 options}
 
-    H --> H1[Return exit feedback]
-    H1 --> H2[exit_match true or false]
-    H1 --> H3[optional rationale]
+    ROUTE -->|Exit Advisor| H[Send context to Exit Advisor]
+    ROUTE -->|Sched Advisor| J[Send context to Scheduling Advisor]
+    ROUTE -->|Info Advisor| I[Send context to Info Advisor]
 
-    I --> I1[Determine whether more role info is needed]
-    I1 --> I2[If needed, retrieve role facts from job description or vector store]
-    I2 --> I3[Return info feedback]
-    I3 --> I4[info_needed true or false]
-    I3 --> I5[optional candidate-facing info reply]
-    I3 --> I6[optional rationale]
+    H --> H1[Processes complete chat history]
+    H1 --> H2{Decides 1 out of 2 options}
+    H2 -->|End Conversation| H3[exit_match true]
+    H2 -->|Don't End Conv| H4[exit_match false]
+    H3 --> HOUT[Send output to Main Agent]
+    H4 --> HOUT
 
-    J --> J1[Determine whether scheduling is appropriate]
-    J1 --> J2[If needed, retrieve SQL availability for the known role]
-    J2 --> J3[Return scheduling feedback]
-    J3 --> J4[schedule_match true or false]
-    J3 --> J5[optional slot suggestions]
-    J3 --> J6[optional rationale]
+    J --> J1[Processes complete chat history]
+    J1 --> J2{Decides 1 out of 2 options}
+    J2 -->|Sched| J3[Retrieve SQL schedule options for known role]
+    J2 -->|Don't Sched| J4[schedule_match false]
+    J3 --> J5[schedule_match true, slot suggestions]
+    J5 --> JOUT[Send output to Main Agent]
+    J4 --> JOUT
 
-    H2 --> K[Main Agent synthesizes advisor outputs]
-    I4 --> K
-    I5 --> K
-    J4 --> K
-    J5 --> K
+    I --> I1[Processes complete chat history]
+    I1 --> I2{Decides 1 out of 2 options}
+    I2 -->|Info Needed| I3[Vector Retrieve Info from job description]
+    I2 -->|Info Not Needed| I4[info_needed false]
+    I3 --> I5[info_needed true, draft reply with retrieved facts]
+    I5 --> IOUT[Send output to Main Agent]
+    I4 --> IOUT
 
-    K --> L{Enough information to answer this turn?}
-    L -->|No| M[Main Agent asks one or more advisors again with clarified guidance]
-    M --> H
-    M --> I
-    M --> J
+    HOUT --> K[Main Agent receives advisor feedback]
+    JOUT --> K
+    IOUT --> K
+
+    K --> L{Confident enough to reply?}
+    L -->|No - needs more input| M[Main Agent routes to another advisor with clarified context]
+    M --> ROUTE
     L -->|Yes| N{Final action}
 
     N -->|end| O[Respond politely and end conversation]
@@ -72,20 +76,25 @@ flowchart TD
 
 - Main Agent:
   - owns the turn loop
-  - owns advisor orchestration
-  - owns the final action decision
+  - decides which one advisor to consult each pass
+  - can loop back and consult another advisor if not confident, passing extra context
+  - owns the final action decision (`continue`, `schedule`, or `end`)
   - owns the final candidate-facing response
 - Exit Advisor:
-  - returns whether the conversation should end
-- Info Advisor:
-  - returns whether more role information is needed and the supporting reply content
+  - receives message + history, decides `exit_match` true or false
 - Scheduling Advisor:
-  - returns whether it is time to schedule and the supporting slot suggestions
+  - receives message + history, decides `schedule_match` true or false
+  - if schedule_match, retrieves available slots from SQL filtered by known role
+- Info Advisor:
+  - receives message + history, decides `info_needed` true or false
+  - if info_needed, retrieves relevant facts from job description vector store
+  - returns a draft candidate-facing reply
 
 ## Important Implementation Notes
 
-- The role should not primarily be inferred from free text once the intake form exists.
-- Advisors should consume shared context rather than maintain separate state models.
-- SQL scheduling must be role-aware.
+- The role should not be inferred from free text; it comes from the intake form.
+- Advisors consume shared context (message + history + role) rather than maintaining separate state.
+- SQL scheduling must be role-aware using the normalized role value.
 - Job-description facts should come from the PDF or the retrieval layer once added.
-- The main agent should remain the only component that decides the final turn action shown to the user.
+- The main agent is the only component that decides and sends the final turn reply to the candidate.
+- The loopback pass should include a clarification note from the main agent explaining what additional input it needs.

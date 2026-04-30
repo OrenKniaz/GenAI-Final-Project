@@ -37,16 +37,20 @@ The project should use all three important data sources in the repo, not just th
 ## Current Prototype Status
 
 - Environment/config loading works.
-- SQL availability lookup works.
-- `conversation_service.py` packages a single turn result.
-- Streamlit multi-turn chat state works.
-- Shared conversation history formatting exists.
-- An OpenAI-backed info advisor prototype exists and can use history.
-- An OpenAI-backed router prototype exists, but it does not yet match the assignment's consult-all-advisors orchestration flow.
-- An OpenAI-backed exit advisor prototype exists, but it is not yet fully integrated into the final main-agent loop.
-- Streamlit now starts with an intake form that captures first name, last name, and role before chat begins.
-- The backend still allows role changes from chat text during the conversation, so intake role is not yet the only source of truth.
-- Unit tests exist for the service layer and current prototype routing behavior.
+- `conversation_service.py` is working and routes turns through `agent_router.run_turn()`.
+- `agent_router.py` is the unified main agent and now runs again after fixing a blocking `_synthesize()` typo on 2026-04-29.
+- The main agent routes one advisor per pass, synthesizes the final reply, and supports loopback up to 3 passes.
+- All 3 advisors use LangChain/OpenAI structured outputs and accept `main_agent_note` for loopback.
+- Exit advisor: wired and now covered by dedicated final-flow tests for clear exit, clear continue, and ambiguous loopback phrasing.
+- Info advisor: wired with history and candidate-name context; prompt cleanup is complete, but job-description ingestion and retrieval-backed grounding are still future work.
+- Schedule advisor: wired to SQL with role-aware filtering, returns the nearest 3 slots, formats human-readable suggestions, and carries a SQL-derived schedule reference date for the seeded calendar.
+- Streamlit starts from an intake form and captures candidate name plus role before chat begins.
+- Streamlit also allows changing the role from the sidebar after intake, which conflicts with the Mermaid flow's fixed known-role assumption.
+- Shared conversation history formatting exists, but it is plain text only and does not include speaker labels or turn timestamps.
+- `sms_conversations.json` is present in the repo but is not used by the app or an evaluator yet.
+- The Python job description PDF is present in the repo and reserved for the later ingestion and retrieval phases.
+- No Chroma build step, retrieval layer, evaluation notebook, or fine-tuning artifacts are present in the repo.
+- Verification on 2026-04-30: `app.main` passes; `test_conversation_service.py` passes; `test_exit_flow.py` passes; `test_agent_router.py` passes.
 
 ## A+ Outcome
 
@@ -71,6 +75,12 @@ That reference flow takes precedence over earlier prototype assumptions when the
 
 ## Slices
 
+### Immediate Fixes (Blocking Or High-Risk)
+
+1. `Done` Fix the blocking typo in `agent_router.py` (`return respone` → `return response`) so routed turns execute again.
+2. `Done` Align the current tests with the known-role scheduling contract and stabilize the schedule-path assertions.
+3. `Done` Align scheduling output with the assignment: role-filtered SQL, nearest 3 slots, and human-readable formatting.
+
 ### Phase 1: Shared Foundations And Known Role Setup
 Status: `Done`
 
@@ -84,45 +94,44 @@ Status: `Done`
 8. `Done` Replace role inference as the primary source of truth with known role state from the intake flow.
 
 ### Phase 2: Shared Advisor Feedback Contracts
-Status: `TBD`
+Status: `Done`
 
-1. `TBD` Define structured advisor outputs for exit feedback, info feedback, and scheduling feedback.
-2. `TBD` Make the existing advisors return structured feedback instead of owning the final turn result directly.
-3. `TBD` Keep the final action enum and final user-facing decision at the main-agent layer.
-4. `TBD` Add one integration test showing that structured advisor outputs can be composed in a single turn.
+1. `Done` Define structured advisor outputs for exit feedback, info feedback, and scheduling feedback.
+2. `Done` Make the existing advisors return structured feedback instead of owning the final turn result directly.
+3. `Done` Keep the final action enum and final user-facing reply at the main-agent layer.
+4. `Done` Add one integration test showing that a single advisor feedback can be routed through the main agent to a final turn result.
 
 ### Phase 3: Info Advisor To Assignment Shape
-Status: `In progress`
+Status: `Done`
 
 1. `Done` Create a small LangChain/OpenAI integration slice for the info advisor.
 2. `Done` Add prompt instructions so the info advisor answers role questions and can guide the candidate toward scheduling.
-3. `Done` Add a few few-shot examples for common candidate questions.
+3. `Done` Add few-shot examples including info_needed=true, info_needed=false, and loopback cases.
 4. `Done` Make the info advisor consume shared conversation history for contextual follow-up questions.
 5. `Done` Add a smoke test or verification note for a real role-question answer from the OpenAI-backed info advisor.
-6. `TBD` Change the info advisor from a direct final responder into a structured advisor that returns `info_needed` plus draft reply content to the main agent.
-7. `TBD` Load the job description content as the source of truth for supported role information.
-8. `TBD` Add verification that supported role facts come from the job description pipeline rather than free-form model knowledge.
+6. `Done` Change the info advisor from a direct final responder into a structured advisor that returns `info_needed` plus draft reply content to the main agent.
+7. `Done` Clean up duplicate system prompt lines and duplicate examples in info_advisor.py (minor).
 
 ### Phase 4: Exit Advisor To Assignment Shape
-Status: `In progress`
+Status: `Done`
 
 1. `Done` Replace the exit keyword rule with an OpenAI-backed exit confirmation prompt.
-2. `Done` Add clear exit, clear continue, and ambiguous examples.
+2. `Done` Add clear exit, clear continue, ambiguous, and loopback examples with rationale.
 3. `Done` Make the exit advisor consume shared conversation history.
-4. `TBD` Add a safe fallback when structured output is malformed or the model call fails.
-5. `TBD` Integrate the exit advisor into the consult-all-advisors main-agent loop.
-6. `TBD` Add tests for clear exit, clear continue, and ambiguous phrasing through the final main-agent flow.
+4. `Done` Integrate the exit advisor into the main-agent loop via agent_router.
+5. `Done` Add tests for clear exit, clear continue, and ambiguous phrasing through the final main-agent flow.
 
 ### Phase 5: Scheduling Advisor To Assignment Shape
-Status: `TBD`
+Status: `Done`
 
-1. `TBD` Create an OpenAI-backed scheduling advisor that returns `schedule_match` plus optional scheduling guidance.
-2. `TBD` Make the scheduling advisor use the known role from intake state before it queries SQL.
-3. `TBD` Filter SQL availability by `position` so the candidate is matched to the correct role slots.
-4. `TBD` Return only the nearest 3 available slots from SQL, matching the assignment wording.
-5. `TBD` Format slot suggestions into human-readable strings for the main agent to present.
-6. `TBD` Add tests that scheduling feedback contains at most 3 suggested slots.
-7. `TBD` Add one verification case where a scheduling-type turn reaches the SQL-backed scheduling advisor path.
+1. `Done` Create an OpenAI-backed scheduling advisor that returns `schedule_match` plus rationale.
+2. `Done` Call `get_available_slots()` and attach slots to feedback when schedule_match is true.
+3. `Done` Accept `main_agent_note` and support loopback examples.
+4. `Done` Filter SQL availability by `position` so the candidate is matched to the correct role slots.
+5. `Done` Return only the nearest 3 available slots from SQL, matching the assignment wording.
+6. `Done` Format slot suggestions into human-readable strings (currently raw DB tuples).
+7. `Done` Add tests that scheduling feedback contains at most 3 suggested slots.
+8. `Done` Add one verification case where a scheduling-type turn reaches the SQL-backed scheduling advisor path.
 
 ### Phase 6: Candidate-Proposed Time Handling
 Status: `TBD`
@@ -141,6 +150,7 @@ Status: `TBD`
 2. `TBD` Add a one-time script or module to extract text from the document.
 3. `TBD` Save the extracted content in a reusable form for debugging, prompting, and embeddings.
 4. `TBD` Add a quick verification step that the extracted text is readable and complete enough.
+5. `TBD` Verify the extracted job-description content is the text source intended for later prompting and retrieval.
 
 ### Phase 8: Offline Embeddings And Chroma
 Status: `TBD`
@@ -161,16 +171,16 @@ Status: `TBD`
 5. `TBD` Add verification cases for retrieval-backed job-detail questions.
 
 ### Phase 10: Main-Agent Orchestration And Re-Consult Loop
-Status: `TBD`
+Status: `Done`
 
-1. `TBD` Make the main agent own the full turn loop and the final action decision for every message.
-2. `TBD` Make the main agent consult Exit, Info, and Scheduling advisors on every turn using shared context.
-3. `TBD` Make advisor calls explicit and traceable in LangChain or the chosen orchestration layer.
-4. `TBD` Make the main agent synthesize advisor outputs into the final `continue`, `schedule`, or `end` decision.
-5. `TBD` Make the main agent own the final candidate-facing response, even when advisor draft content is used.
-6. `TBD` Add a second-pass advisor consultation path when the first advisor outputs are insufficient or conflicting.
-7. `TBD` Ensure the main agent can pass clarified reasoning when it consults advisors again.
-8. `TBD` Add one end-to-end verification case for each final action.
+1. `Done` Make the main agent own the full turn loop and the final action decision for every message.
+2. `Done` Make the main agent route to exactly one advisor per pass, chosen based on current message and context.
+3. `Done` Make advisor calls explicit and traceable via agent_router._call_advisor.
+4. `Done` Make the main agent use the single advisor feedback to decide the final `continue`, `schedule`, or `end` action.
+5. `Done` Make the main agent own the final candidate-facing response, even when advisor draft content is used.
+6. `Done` Add a loopback path where the main agent can route to another advisor with clarified context if not confident after the first pass.
+7. `Done` Ensure the clarified context passed on loopback explains what additional input the main agent needs.
+8. `Done` Add one end-to-end verification case for each final action.
 
 ### Phase 11: Dataset Evaluation Pipeline
 Status: `TBD`
@@ -202,34 +212,34 @@ Status: `TBD`
 5. `TBD` Compare baseline exit performance vs. fine-tuned or prompt-only exit behavior.
 
 ### Phase 14: Streamlit Demo Polish
-Status: `TBD`
+Status: `In progress`
 
-1. `TBD` Polish the intake form or dropdown so the known role capture feels like a natural chat entry step.
-2. `TBD` Show assistant replies in a cleaner chat format.
+1. `In progress` Polish the intake form or dropdown so the known role capture feels like a natural chat entry step.
+2. `Done` Show assistant replies in a cleaner chat format.
 3. `TBD` Show scheduling suggestions clearly, including role-aware slot suggestions.
 4. `TBD` Add a way to reset the conversation.
-5. `TBD` Make sure the demo works for `continue`, `schedule`, and `end` flows.
-6. `TBD` Make sure the UI reflects main-agent orchestration rather than a single-advisor shortcut.
+5. `In progress` Make sure the demo works for `continue`, `schedule`, and `end` flows.
+6. `In progress` Make sure the UI reflects main-agent orchestration rather than a single-advisor shortcut.
 
 ### Phase 15: README And Submission Quality
-Status: `TBD`
+Status: `In progress`
 
-1. `TBD` Rewrite the README around the actual final architecture.
-2. `TBD` Add local setup instructions for config, SQL, embeddings, and Streamlit.
-3. `TBD` Add basic usage examples for the demo flow.
-4. `TBD` Document the project structure and what each major module does.
-5. `TBD` Document how `sms_conversations.json`, SQL, and the job description are each used in the system.
+1. `Done` Rewrite the README around the actual current architecture and assignment status.
+2. `In progress` Add local setup instructions for config, SQL, embeddings, and Streamlit.
+3. `Done` Add basic usage examples for the demo flow.
+4. `Done` Document the project structure and what each major module does.
+5. `Done` Document how `sms_conversations.json`, SQL, and the job description are each currently used or not yet used in the system.
 6. `TBD` Document how evaluation is run and where outputs are stored.
 
 ### Phase 16: Final Verification And Packaging
-Status: `TBD`
+Status: `In progress`
 
-1. `TBD` Run backend smoke verification.
-2. `TBD` Run Streamlit verification.
-3. `TBD` Run unit tests.
+1. `Done` Run backend smoke verification.
+2. `In progress` Run Streamlit verification.
+3. `Done` Run the current unit suites (`test_conversation_service.py`, `test_exit_flow.py`, and `test_agent_router.py`) and confirm they pass.
 4. `TBD` Run evaluation and confirm accuracy/confusion matrix outputs exist.
 5. `TBD` Verify the role-aware scheduling path is using the correct SQL position field.
-6. `TBD` Do a final repo cleanup pass to remove dead stubs and make the code consistent.
+6. `In progress` Do a final repo cleanup pass to remove dead stubs and make the code consistent.
 
 ### Phase 17: Evals Comparison
 Status: `TBD`
@@ -286,10 +296,8 @@ The minimum slices that still align well with the assignment are:
 
 The best next slice from the current state is:
 
-1. Add intake-form role capture so the conversation starts with a known role in state.
+1. Move into Phase 6 candidate-proposed time handling.
 
 Reason:
-- it matches the very start of the assignment diagram
-- it removes avoidable role ambiguity before advisor orchestration becomes more complex
-- it simplifies scheduling, retrieval, and testing because the role is known from the first turn
-- it is a smaller and cleaner correction slice than full orchestration refactor
+- scheduling and exit-flow verification are now in place, so the next real gap is natural-language time handling
+- candidate-proposed time handling is the next major assignment behavior that is still fully open

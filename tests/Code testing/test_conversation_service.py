@@ -3,11 +3,13 @@
 import unittest
 
 from app.modules.conversation_service import process_candidate_turn, CandidateTurnInput
-
+from app.modules.Helpers.sql_helper import get_schedule_reference_date
 
 class TestConversationService(unittest.TestCase):
     def test_schedule_turn_returns_slots(self):
-        result = process_candidate_turn(CandidateTurnInput(message="what's your schedule"))
+        result = process_candidate_turn(
+            CandidateTurnInput(message="Can we schedule an interview?", role="Python Developer")
+        )
         slots = result.slots
 
         self.assertEqual(result.action, "schedule")
@@ -15,6 +17,10 @@ class TestConversationService(unittest.TestCase):
         self.assertIsNotNone(slots)
         assert slots is not None
         self.assertGreater(len(slots), 0)
+        self.assertLessEqual(len(slots), 3)
+        self.assertTrue(all(" at " in slot for slot in slots))
+        self.assertTrue(all("datetime.date" not in slot for slot in slots))
+        self.assertTrue(all("datetime.time" not in slot for slot in slots))
 
     def test_end_turn_returns_no_slots(self):
         result = process_candidate_turn(CandidateTurnInput(message="bye, I am not interested anymore"))
@@ -30,11 +36,12 @@ class TestConversationService(unittest.TestCase):
         self.assertFalse(result.show_slots)
         self.assertIsNone(result.slots)
 
-    def test_exit_takes_precedence_over_schedule(self):
+    def test_schedule_turn_without_role_returns_no_slots(self):
         result = process_candidate_turn(
-        CandidateTurnInput(message="bye, can we schedule an interview?"))
+        CandidateTurnInput(message="Can we schedule an interview?"))
 
-        self.assertEqual(result.action, "end")
+        self.assertIsNone(result.role)
+        self.assertIsNone(result.normalized_role)
         self.assertFalse(result.show_slots)
         self.assertIsNone(result.slots)
 
@@ -65,14 +72,19 @@ class TestConversationService(unittest.TestCase):
         self.assertIsNone(result.slots)
 
 
-    def test_interested_in_interview_routes_to_schedule(self):
+    def test_available_times_with_role_routes_to_schedule(self):
         result = process_candidate_turn(
-            CandidateTurnInput(message="I'm interested in interviewing for this role")
+            CandidateTurnInput(message="What times are available?", role="Python Developer")
         )
 
         self.assertEqual(result.action, "schedule")
         self.assertTrue(result.show_slots)
         self.assertIsNotNone(result.slots)
+        assert result.slots is not None
+        self.assertLessEqual(len(result.slots), 3)
+        self.assertTrue(all(" at " in slot for slot in result.slots))
+        self.assertTrue(all("datetime.date" not in slot for slot in result.slots))
+        self.assertTrue(all("datetime.time" not in slot for slot in result.slots))
 
 
     def test_interested_goodbye_routes_to_end(self):
@@ -119,6 +131,13 @@ class TestConversationService(unittest.TestCase):
         )
         self.assertIsNone(result.role)
         self.assertIsNone(result.normalized_role)
+
+    def test_schedule_reference_date_exists_for_python_dev(self):
+        reference_date = get_schedule_reference_date("Python Dev")
+
+        self.assertIsNotNone(reference_date)
+        assert reference_date is not None
+        self.assertEqual(reference_date.year, 2024)
     
 if __name__ == "__main__":
     unittest.main()
