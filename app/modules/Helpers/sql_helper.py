@@ -13,19 +13,60 @@ def get_connection() -> pyodbc.Connection:
     return pyodbc.connect(settings.sql_server_connection_string)
 
 # A function that runs a simple query to get available interview slots from the Schedule table. It uses a parameterized query to limit the number of results returned.
-def get_available_slots(position: str, limit: int = 3):
-    query = """
-        SELECT TOP (?) ScheduleID, [date], [time], position
-        FROM dbo.Schedule
-        WHERE available = 1
-          AND position = ?
-        ORDER BY [date], [time]
-    """
+def get_available_slots(
+    position: str,
+    limit: int = 3,
+    target_date: dt.date | None = None,
+    target_time: dt.time | None = None,
+):
+    if target_date is None or target_time is None:
+        query = """
+            SELECT TOP (?) ScheduleID, [date], [time], position
+            FROM dbo.Schedule
+            WHERE available = 1
+              AND position = ?
+            ORDER BY [date], [time]
+        """
+        params = (limit, position)
+    else:
+        query = """
+            SELECT TOP (?) ScheduleID, [date], [time], position
+            FROM dbo.Schedule
+            WHERE available = 1
+              AND position = ?
+            ORDER BY ABS(
+                DATEDIFF(
+                    MINUTE,
+                    CAST(? AS datetime) + CAST(? AS datetime),
+                    CAST([date] AS datetime) + CAST([time] AS datetime)
+                )
+            ),
+            [date],
+            [time]
+        """
+        params = (limit, position, target_date, target_time)
 
     with get_connection() as connection:
         cursor = connection.cursor()
-        cursor.execute(query, limit, position)
+        cursor.execute(query, *params)
         return cursor.fetchall()
+
+# A function that gives more accurte available slot based on the candidate's requested time.
+# Basically asking, does the candidate requested time exists for the role?
+def get_exact_available_slot(position: str, slot_date: dt.date, slot_time: dt.time):
+    query = """
+        SELECT TOP (1) ScheduleID, [date], [time], position
+        FROM dbo.Schedule
+        WHERE available = 1
+          AND position = ?
+          AND [date] = ?
+          AND [time] = ?
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(query, position, slot_date, slot_time)
+        return cursor.fetchone()
+
 
 # get the earliest available slot for interview
 def get_schedule_reference_date(position: str) -> dt.date | None:

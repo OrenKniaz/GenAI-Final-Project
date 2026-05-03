@@ -114,14 +114,30 @@ def _call_advisor(action: Action, context: AdvisorContext) -> tuple[str, list[st
     if action == Action.SCHEDULE:
         fb = get_schedule_feedback(context.message, context.role, context.history, context.main_agent_note)
         slots = ", ".join(fb.slots) if fb.slots else "none"
-        return f"Schedule advisor: schedule_match={fb.schedule_match}, rationale={fb.rationale}, slots=[{slots}]", fb.slots
+        return (
+            "Schedule advisor: "
+            f"schedule_match={fb.schedule_match}, "
+            f"reference_date={fb.reference_date_text}, "
+            f"requested_time_text={fb.requested_time_text}, "
+            f"requested_slot_text={fb.requested_slot_text}, "
+            f"requested_slot_available={fb.requested_slot_available}, "
+            f"rationale={fb.rationale}, "
+            f"slots=[{slots}]"
+        ), fb.slots
 
     fb = generate_info_feedback(
-        context.message, context.role, context.history,
-        context.first_name, context.last_name, context.main_agent_note,
+        context.message,
+        context.role,
+        context.history,
+        context.first_name,
+        context.last_name,
+        context.main_agent_note,
     )
-    return f"Info advisor: info_needed={fb.info_needed}, rationale={fb.rationale}, draft_reply={fb.draft_reply}", None
-
+    return (
+        f"Info advisor: info_needed={fb.info_needed}, "
+        f"rationale={fb.rationale}, "
+        f"draft_reply={fb.draft_reply}"
+    ), None
 # Step 3: synthesize advisor feedback into final reply
 
 def _synthesize(context: AdvisorContext, feedback_summary: str) -> MainAgentDecision:
@@ -139,7 +155,8 @@ def _synthesize(context: AdvisorContext, feedback_summary: str) -> MainAgentDeci
             "When confident is false, populate clarification_needed with a specific question explaining what the advisor needs to resolve, e.g. 'Unclear whether candidate wants to end or just pause — please clarify intent.'\n"
             "Set confident to false only if the feedback is contradictory or clearly insufficient.\n"
             "Keep the reply brief and SMS-friendly (1-3 sentences). be polite and kind\n"
-            "Do not mention advisors or internal routing to the candidate."
+            "Do not mention advisors or internal routing to the candidate.\n"
+            "Treat dates and times in schedule advisor feedback as authoritative seeded SQL calendar values. Do not reinterpret them using the real current date.\n"
         )),
         # Example: continue
         HumanMessage(content=(

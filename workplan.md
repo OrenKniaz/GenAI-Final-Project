@@ -43,14 +43,14 @@ The project should use all three important data sources in the repo, not just th
 - All 3 advisors use LangChain/OpenAI structured outputs and accept `main_agent_note` for loopback.
 - Exit advisor: wired and now covered by dedicated final-flow tests for clear exit, clear continue, and ambiguous loopback phrasing.
 - Info advisor: wired with history and candidate-name context; prompt cleanup is complete, but job-description ingestion and retrieval-backed grounding are still future work.
-- Schedule advisor: wired to SQL with role-aware filtering, returns the nearest 3 slots, formats human-readable suggestions, and carries a SQL-derived schedule reference date for the seeded calendar.
+- Schedule advisor: wired to SQL with role-aware filtering, returns the nearest 3 slots, formats human-readable suggestions, carries a SQL-derived schedule reference date for the seeded calendar, and now handles candidate-proposed times with exact-slot confirmation or nearest alternatives.
 - Streamlit starts from an intake form and captures candidate name plus role before chat begins.
 - Streamlit also allows changing the role from the sidebar after intake, which conflicts with the Mermaid flow's fixed known-role assumption.
 - Shared conversation history formatting exists, but it is plain text only and does not include speaker labels or turn timestamps.
 - `sms_conversations.json` is present in the repo but is not used by the app or an evaluator yet.
 - The Python job description PDF is present in the repo and reserved for the later ingestion and retrieval phases.
 - No Chroma build step, retrieval layer, evaluation notebook, or fine-tuning artifacts are present in the repo.
-- Verification on 2026-04-30: `app.main` passes; `test_conversation_service.py` passes; `test_exit_flow.py` passes; `test_agent_router.py` passes.
+- Verification on 2026-05-03: `app.main` passes; `test_conversation_service.py` passes with 19 tests; `test_exit_flow.py` passes; `test_agent_router.py` passes.
 
 ## A+ Outcome
 
@@ -134,43 +134,35 @@ Status: `Done`
 8. `Done` Add one verification case where a scheduling-type turn reaches the SQL-backed scheduling advisor path.
 
 ### Phase 6: Candidate-Proposed Time Handling
+Status: `Done`
+
+1. `Done` Add an agentic extraction step for candidate-proposed time phrases like `Friday at 11` or `next Monday`.
+2. `Done` Interpret proposed times relative to the seeded SQL schedule reference date, using the current message and relevant conversation history when needed.
+3. `Done` Check whether the proposed slot exists in SQL for the known role.
+4. `Done` If the proposed slot exists, confirm it.
+5. `Done` If the proposed slot does not exist, return the nearest 3 alternatives for that role.
+6. `Done` Add tests for requested-time available and requested-time unavailable cases.
+
+### Phase 7: Knowledge Base Build (PDF To Chroma)
 Status: `TBD`
 
-1. `TBD` Add a parser or extraction step for candidate-proposed time phrases like `Friday at 11` or `next Monday`.
-2. `TBD` Interpret proposed times relative to the conversation timestamp when possible.
-3. `TBD` Check whether the proposed slot exists in SQL for the known role.
-4. `TBD` If the proposed slot exists, confirm it.
-5. `TBD` If the proposed slot does not exist, return the nearest 3 alternatives for that role.
-6. `TBD` Add tests for requested-time available and requested-time unavailable cases.
+1. `TBD` Build one offline pipeline that reads the Python job description PDF and writes embeddings to Chroma.
+2. `TBD` Add chunking logic suitable for a single role document and keep chunk metadata for traceability.
+3. `TBD` Persist the Chroma collection using the configured persist directory.
+4. `TBD` Add a verification script that runs end-to-end and confirms the collection is queryable.
+5. `TBD` Save lightweight debug artifacts (for example chunk counts and sample chunks) to validate ingestion quality.
+6. `TBD` Document how to rerun the pipeline locally.
 
-### Phase 7: Job Description Ingestion
-Status: `TBD`
-
-1. `TBD` Locate and load the Python job description PDF used for role answers.
-2. `TBD` Add a one-time script or module to extract text from the document.
-3. `TBD` Save the extracted content in a reusable form for debugging, prompting, and embeddings.
-4. `TBD` Add a quick verification step that the extracted text is readable and complete enough.
-5. `TBD` Verify the extracted job-description content is the text source intended for later prompting and retrieval.
-
-### Phase 8: Offline Embeddings And Chroma
-Status: `TBD`
-
-1. `TBD` Create the offline embedding step using OpenAI embeddings.
-2. `TBD` Store the embedded chunks in Chroma using the configured persist directory.
-3. `TBD` Add chunking logic appropriate for a single job description document.
-4. `TBD` Add a verification script that builds the Chroma collection successfully.
-5. `TBD` Document how to rerun the embedding step locally.
-
-### Phase 9: Retrieval-Augmented Info Advisor
+### Phase 8: Retrieval-Backed Info Advisor
 Status: `TBD`
 
 1. `TBD` Add a retrieval step from Chroma for role-related candidate questions.
-2. `TBD` Feed retrieved context into the info advisor prompt.
-3. `TBD` Compare pre-RAG info answers with retrieval-backed answers.
-4. `TBD` Tune chunking and retrieval settings if answers are weak or hallucinated.
+2. `TBD` Feed retrieved context into the info advisor prompt and keep responses grounded in retrieved facts.
+3. `TBD` Compare pre-retrieval info answers with retrieval-backed answers.
+4. `TBD` Tune retrieval settings if answers are weak or hallucinated.
 5. `TBD` Add verification cases for retrieval-backed job-detail questions.
 
-### Phase 10: Main-Agent Orchestration And Re-Consult Loop
+### Phase 9: Main-Agent Orchestration And Re-Consult Loop
 Status: `Done`
 
 1. `Done` Make the main agent own the full turn loop and the final action decision for every message.
@@ -182,7 +174,7 @@ Status: `Done`
 7. `Done` Ensure the clarified context passed on loopback explains what additional input the main agent needs.
 8. `Done` Add one end-to-end verification case for each final action.
 
-### Phase 11: Dataset Evaluation Pipeline
+### Phase 10: Dataset Evaluation Pipeline
 Status: `TBD`
 
 1. `TBD` Inspect `Database/sms_conversations.json` and define how one conversation turn maps to a model input.
@@ -193,7 +185,7 @@ Status: `TBD`
 6. `TBD` Use difficult cases from the dataset as prompt examples or failure-analysis examples where appropriate.
 7. `TBD` Save intermediate evaluation outputs in a clean, reusable form.
 
-### Phase 12: Required Evaluation Notebook
+### Phase 11: Required Evaluation Notebook
 Status: `TBD`
 
 1. `TBD` Create `test_evals.ipynb` in the required test area.
@@ -202,7 +194,7 @@ Status: `TBD`
 4. `TBD` Plot or display the confusion matrix.
 5. `TBD` Add a short failure analysis section with a few representative misses from `sms_conversations.json`.
 
-### Phase 13: Fine-Tuning Slice For Exit Advisor
+### Phase 12: Fine-Tuning Slice For Exit Advisor
 Status: `TBD`
 
 1. `TBD` Inspect the labeled data for exit-related examples.
@@ -211,7 +203,7 @@ Status: `TBD`
 4. `TBD` If feasible within time and credits, run a small fine-tuning experiment.
 5. `TBD` Compare baseline exit performance vs. fine-tuned or prompt-only exit behavior.
 
-### Phase 14: Streamlit Demo Polish
+### Phase 13: Streamlit Demo Polish
 Status: `In progress`
 
 1. `In progress` Polish the intake form or dropdown so the known role capture feels like a natural chat entry step.
@@ -221,7 +213,7 @@ Status: `In progress`
 5. `In progress` Make sure the demo works for `continue`, `schedule`, and `end` flows.
 6. `In progress` Make sure the UI reflects main-agent orchestration rather than a single-advisor shortcut.
 
-### Phase 15: README And Submission Quality
+### Phase 14: README And Submission Quality
 Status: `In progress`
 
 1. `Done` Rewrite the README around the actual current architecture and assignment status.
@@ -231,7 +223,7 @@ Status: `In progress`
 5. `Done` Document how `sms_conversations.json`, SQL, and the job description are each currently used or not yet used in the system.
 6. `TBD` Document how evaluation is run and where outputs are stored.
 
-### Phase 16: Final Verification And Packaging
+### Phase 15: Final Verification And Packaging
 Status: `In progress`
 
 1. `Done` Run backend smoke verification.
@@ -241,7 +233,7 @@ Status: `In progress`
 5. `TBD` Verify the role-aware scheduling path is using the correct SQL position field.
 6. `In progress` Do a final repo cleanup pass to remove dead stubs and make the code consistent.
 
-### Phase 17: Evals Comparison
+### Phase 16: Evals Comparison
 Status: `TBD`
 
 1. `TBD` Prompts without examples.
@@ -256,21 +248,21 @@ Use two parallel workers after Phase 1. Each worker develops on a separate featu
 
 - Phase 2: `TBD` Own chat rendering and frontend alignment with the new main-agent orchestration flow.
 - Phase 1: `TBD` Own intake-form role capture and known-role UX.
-- Phase 3: `TBD` Own job-description loading, prompt wording, retrieval context, and info-answer shaping.
+- Phase 3: `TBD` Own info-advisor prompt wording, retrieval-context injection, and info-answer shaping.
 - Phase 6: `TBD` Own time-expression parsing and confirmation wording.
-- Phase 9: `TBD` Own retrieval prompt integration and answer comparison.
-- Phase 12: `TBD` Own the required evaluation notebook.
-- Phase 14: `TBD` Own Streamlit polish and conversation UX.
+- Phase 8: `TBD` Own retrieval prompt integration and answer comparison.
+- Phase 11: `TBD` Own the required evaluation notebook.
+- Phase 13: `TBD` Own Streamlit polish and conversation UX.
 
 ### Worker B: Routing, Data, And Evaluation Track
 
 - Phase 2: `TBD` Own structured advisor outputs and shared advisor-result contracts.
 - Phase 4: `TBD` Own exit-advisor prompt, fallback behavior, and tests.
 - Phase 5: `TBD` Own scheduling decision logic, role-aware SQL filtering, and slot formatting.
-- Phase 7: `TBD` Own document extraction and reusable storage.
-- Phase 8: `TBD` Own embeddings build, Chroma persistence, and verification.
-- Phase 11: `TBD` Own the dataset evaluator and saved outputs.
-- Phase 13: `TBD` Own fine-tuning prep and baseline comparison.
+- Phase 7: `TBD` Own the offline PDF-to-Chroma build pipeline and verification.
+- Phase 8: `TBD` Own retrieval wiring, retrieval quality checks, and integration tests.
+- Phase 10: `TBD` Own the dataset evaluator and saved outputs.
+- Phase 12: `TBD` Own fine-tuning prep and baseline comparison.
 
 ### End-Of-Phase Merge Rule
 
@@ -296,8 +288,8 @@ The minimum slices that still align well with the assignment are:
 
 The best next slice from the current state is:
 
-1. Move into Phase 6 candidate-proposed time handling.
+1. Move into Phase 7 knowledge base build (PDF to Chroma) and land a runnable end-to-end ingestion script.
 
 Reason:
-- scheduling and exit-flow verification are now in place, so the next real gap is natural-language time handling
-- candidate-proposed time handling is the next major assignment behavior that is still fully open
+- Phase 6 is now complete and verified, so the next delivery blocker is retrieval readiness
+- once Phase 7 is complete, Phase 8 retrieval integration can be implemented and validated quickly

@@ -37,11 +37,15 @@ class TestAgentRouter(unittest.TestCase):
 
         feedback = ScheduleAdvisorFeedback(
             schedule_match=True,
+            requested_time_text=None,
+            requested_slot_text=None,
+            requested_slot_available=None,
             slots=[
                 "Tuesday, 2024-01-02 at 09:00",
                 "Tuesday, 2024-01-02 at 11:00",
                 "Wednesday, 2024-01-03 at 14:00",
             ],
+            reference_date_text="2024-01-02",
             rationale="Candidate explicitly asked to set up an interview.",
         )
 

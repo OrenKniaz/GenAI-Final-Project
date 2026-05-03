@@ -11,12 +11,12 @@ Implemented now:
 - Main-agent routing exists in `app/modules/agent_router.py` and delegates to exit, schedule, or info advisors.
 - All three advisors use LangChain plus OpenAI structured outputs.
 - Shared history is passed through the backend turn contract.
-- SQL availability lookup is role-aware, limited to the nearest 3 slots, and formatted into human-readable suggestions.
+- SQL availability lookup is role-aware, limited to the nearest 3 slots, formatted into human-readable suggestions, and supports candidate-proposed times with exact-slot confirmation or nearest alternatives.
 - Exit flow coverage now includes clear exit, clear continue, and ambiguous loopback cases through the final main-agent flow.
+- Candidate-proposed time handling is implemented and covered by direct schedule-advisor tests plus conversation-service coverage.
 - Backend smoke execution works through `app.main`.
 
 Still missing or not assignment-aligned:
-- Candidate-proposed time parsing and validation are not implemented.
 - The info advisor does not yet ingest the job-description PDF or retrieve grounded facts from Chroma.
 - `sms_conversations.json` is not yet used for evaluation.
 - No `test_evals.ipynb`, accuracy/confusion-matrix pipeline, or exit-advisor fine-tuning artifacts are in the repo.
@@ -24,9 +24,9 @@ Still missing or not assignment-aligned:
 
 ## Current Verification
 
-Latest checks on 2026-04-30:
+Latest checks on 2026-05-03:
 - `app.main` passed.
-- `tests/Code testing/test_conversation_service.py` passed.
+- `tests/Code testing/test_conversation_service.py` passed with 19 tests.
 - `tests/Code testing/test_exit_flow.py` passed.
 - `tests/Code testing/test_agent_router.py` passed.
 
@@ -35,7 +35,7 @@ Latest checks on 2026-04-30:
 - `app/modules/conversation_service.py` builds the shared turn contract and calls the main agent.
 - `app/modules/agent_router.py` is the main agent. It chooses one advisor per pass, supports loopback, and returns the final action plus reply.
 - `app/modules/exit_advisor.py` decides whether the conversation should end.
-- `app/modules/schedule_advisor.py` decides whether scheduling is appropriate and fetches slots from SQL.
+- `app/modules/schedule_advisor.py` decides whether scheduling is appropriate, interprets candidate-proposed times against the seeded SQL calendar, and fetches exact or nearest slots from SQL.
 - `app/modules/info_advisor.py` answers role/process questions, but it is currently prompt-only and not retrieval-backed.
 - `streamlit_app/streamlit_main.py` provides the proof-of-concept UI.
 
@@ -113,6 +113,12 @@ Run the router integration suite:
 Notes:
 - `test_conversation_service.py` exercises the live LangChain/OpenAI plus SQL-backed path.
 - `test_agent_router.py` and `test_exit_flow.py` are focused router-flow tests that mock the LLM boundary to verify orchestration behavior cheaply.
+
+## Current Status
+
+- Phases 1 through 6 are complete, including candidate-proposed time handling.
+- The next major delivery slice is the offline PDF-to-Chroma pipeline for the job description, followed by retrieval-backed grounding in the info advisor.
+- Evaluation, the required notebook, and fine-tuning remain open.
 
 ## Project Structure
 
