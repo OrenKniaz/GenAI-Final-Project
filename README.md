@@ -4,6 +4,8 @@
 
 This repository contains a Streamlit proof of concept for an SMS-style recruiting chatbot for a Python Developer role. The assignment target is a main agent that decides whether to `continue`, `schedule`, or `end`, supported by three advisor agents plus external data sources.
 
+For the detailed phase tracker and remaining scope, see `workplan.md`.
+
 ## Assignment Alignment Snapshot
 
 Implemented now:
@@ -114,11 +116,12 @@ Notes:
 - `test_conversation_service.py` exercises the live LangChain/OpenAI plus SQL-backed path.
 - `test_agent_router.py` and `test_exit_flow.py` are focused router-flow tests that mock the LLM boundary to verify orchestration behavior cheaply.
 
-## Current Status
+## Project Status
 
-- Phases 1 through 6 are complete, including candidate-proposed time handling.
-- The next major delivery slice is the offline PDF-to-Chroma pipeline for the job description, followed by retrieval-backed grounding in the info advisor.
-- Evaluation, the required notebook, and fine-tuning remain open.
+- The core multi-agent flow is implemented and working in Streamlit.
+- Scheduling is SQL-backed, role-aware, and supports candidate-proposed times with exact-slot confirmation or nearest alternatives.
+- The info advisor is currently prompt-only and not yet retrieval-backed.
+- Evaluation, the required notebook, and fine-tuning are not implemented yet.
 
 ## Project Structure
 
