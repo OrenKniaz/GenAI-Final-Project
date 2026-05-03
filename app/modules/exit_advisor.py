@@ -18,7 +18,7 @@ def get_exit_feedback(
     main_agent_note: str | None = None,
 ) -> ExitAdvisorFeedback:
 
-    llm = build_chat_llm(temperature=0)
+    llm = build_chat_llm(temperature=0.1) # low temperature for more deterministic output, but not zero to allow for some nuance in ambiguous cases.
     structured_llm = llm.with_structured_output(ExitAdvisorFeedback)
     history_text = format_conversation_history(history or [])
     role_text = role or "the role"

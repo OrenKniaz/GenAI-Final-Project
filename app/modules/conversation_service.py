@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from app.modules.agent_router import AdvisorContext, run_turn
+from app.modules.agent_router import TurnContext, run_turn
 
 from app.modules.Helpers.role_helper import normalize_role
 
@@ -29,7 +29,8 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
     resolved_role = turn.role
     normalized_role = normalize_role(resolved_role)
 
-    context = AdvisorContext(
+    # build the advisor context with the candidate's message, role, conversation history, and name
+    context = TurnContext(
         message=turn.message,
         role=resolved_role,
         history=turn.history or [],
@@ -37,13 +38,13 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
         last_name=turn.last_name,
     )
 
-    decision = run_turn(context)
+    decision = run_turn(context) # run the agent router (basically initiate the turn)
     slots = decision.slots
     show_slots = bool(slots)
 
     return CandidateTurnResult(
         action=decision.action,
-        assistant_message=decision.reply,
+        assistant_message=decision.reply, # what is actually displayed for the candidate...
         role=resolved_role,
         normalized_role=normalized_role,
         slots=slots,

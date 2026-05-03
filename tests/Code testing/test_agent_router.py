@@ -4,7 +4,7 @@
 import unittest
 from unittest.mock import patch
 
-from app.modules.agent_router import Action, AdvisorContext, MainAgentDecision, run_turn
+from app.modules.agent_router import Action, TurnContext, MainAgentDecision, run_turn
 from app.modules.schedule_advisor import ScheduleAdvisorFeedback
 
 
@@ -28,7 +28,7 @@ class _FakeLLM:
 
 class TestAgentRouter(unittest.TestCase):
     def test_single_schedule_feedback_routes_to_final_turn_result(self):
-        context = AdvisorContext(
+        context = TurnContext(
             message="Can we schedule an interview?",
             role="Python Developer",
             history=[],

@@ -54,12 +54,15 @@ def get_schedule_feedback(
     history_text = format_conversation_history(history or [])
     note_text = f"\nMain agent note: {main_agent_note}" if main_agent_note else ""
 
-    normalized_role = normalize_role(role)
+    normalized_role = normalize_role(role) # get role name that matches SQL DB
+
+    # Get avaialble slots for this role, using SQL Helper.
     reference_date = (
         get_schedule_reference_date(normalized_role)
         if normalized_role
         else None
     )
+    # Format reference date for prompt; if unavailable, indicate it's unknown.
     reference_date_text = (
         reference_date.isoformat()
         if reference_date is not None
@@ -121,8 +124,8 @@ def get_schedule_feedback(
     ]
 
     result = structured_llm.invoke(messages)
-
-    if isinstance(result, dict):
+    #read ScheuldeInterpretation class from LLM result, handle both dict and object return types for flexibility
+    if isinstance(result, dict): # in case return is a dict and not an object...
         schedule_match = result.get("schedule_match", False)
         requested_time_text = result.get("requested_time_text")
         requested_slot_text = result.get("requested_slot_text")
@@ -133,13 +136,14 @@ def get_schedule_feedback(
         requested_slot_text = result.requested_slot_text
         rationale = result.rationale
 
-    requested_slot_available = None
-    slots = None
+    requested_slot_available = None #initialize as none, only set to true or false if we have a requested slot to check against availability
+    slots = None #initialize as none, only set if we have schedule_match and a normalized role to check against SQL for available slots
 
-    if schedule_match and normalized_role:
-        if requested_slot_text:
+    if schedule_match and normalized_role: # LLM indicated a scheduleing event, and we have a normalized role - > go to SQL to get slots..
+        if requested_slot_text: # if candidate asked for a specific slot\time, check if it's available
             # Accept strict "YYYY-MM-DD HH:MM"; tolerate legacy "YYYY-MM-DD at HH:MM".
             slot_text = requested_slot_text.replace(" at ", " ").strip()
+            # Try to parse the exact requested slot, if it fails, just show nearby slots..
             try:
                 requested_dt = dt.datetime.strptime(slot_text, "%Y-%m-%d %H:%M")
                 requested_date = requested_dt.date()
@@ -150,6 +154,7 @@ def get_schedule_feedback(
                 if not requested_time_text:
                     requested_time_text = requested_slot_text
 
+                # check is there is exact match for requested slot, if so, set available to true, if not, use get_available_slots to find nearest slots
                 exact_slot = get_exact_available_slot(normalized_role, requested_date, requested_time)
                 if exact_slot is not None:
                     requested_slot_available = True
@@ -167,6 +172,7 @@ def get_schedule_feedback(
                 requested_slot_available = False
                 raw_slots = get_available_slots(position=normalized_role)
                 slots = [_format_slot(slot) for slot in raw_slots]
+        # if no specific slot was requested, just get available slots for the role
         else:
             raw_slots = get_available_slots(position=normalized_role)
             slots = [_format_slot(slot) for slot in raw_slots]

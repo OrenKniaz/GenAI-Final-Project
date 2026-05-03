@@ -12,7 +12,7 @@ from app.modules.Helpers.llm_helper import build_chat_llm
 # Shared input contract — built by conversation_service, passed to run_turn
 
 @dataclass(frozen=True)
-class AdvisorContext:
+class TurnContext:
     message: str
     role: str | None
     history: list[str]
@@ -44,7 +44,7 @@ class MainAgentDecision(BaseModel):
 
 # Step 1: decide which advisor to call
 
-def _pick_advisor(context: AdvisorContext) -> Action:
+def _pick_advisor(context: TurnContext) -> Action:
     llm = build_chat_llm(temperature=0)
     structured_llm = llm.with_structured_output(RouteSelection)
 
@@ -101,7 +101,7 @@ def _pick_advisor(context: AdvisorContext) -> Action:
 
 # Step 2: call the chosen advisor, get structured feedback
 
-def _call_advisor(action: Action, context: AdvisorContext) -> tuple[str, list[str] | None]:
+def _call_advisor(action: Action, context: TurnContext) -> tuple[str, list[str] | None]:
     # imported here to avoid circular imports at module load time
     from app.modules.exit_advisor import get_exit_feedback
     from app.modules.info_advisor import generate_info_feedback
@@ -140,8 +140,8 @@ def _call_advisor(action: Action, context: AdvisorContext) -> tuple[str, list[st
     ), None
 # Step 3: synthesize advisor feedback into final reply
 
-def _synthesize(context: AdvisorContext, feedback_summary: str) -> MainAgentDecision:
-    llm = build_chat_llm(temperature=0)
+def _synthesize(context: TurnContext, feedback_summary: str) -> MainAgentDecision:
+    llm = build_chat_llm(temperature=0.1)  # add a touch of temperature for more natural replies, while still being focused on the prompt guidance
     structured_llm = llm.with_structured_output(MainAgentDecision)
 
     history_text = format_conversation_history(context.history)
@@ -232,17 +232,17 @@ def _synthesize(context: AdvisorContext, feedback_summary: str) -> MainAgentDeci
 
 # Public entry point — called by conversation_service
 
-def run_turn(context: AdvisorContext, max_loops: int = 3) -> MainAgentDecision:
+def run_turn(context: TurnContext, max_loops: int = 3) -> MainAgentDecision: # don't allow router agent to call advisors more than 3 times...
     for attempt in range(max_loops):
-        action = _pick_advisor(context)
-        feedback_summary, slots = _call_advisor(action, context)
-        decision = _synthesize(context, feedback_summary)
+        action = _pick_advisor(context) # read prompts - > decide which advisor to call
+        feedback_summary, slots = _call_advisor(action, context) - > call the advisor -> get his feedback
+        decision = _synthesize(context, feedback_summary) # read feedback - > decide confidence level ->reply\loop to advisor with note if needed
 
         if decision.confident or attempt == max_loops - 1:
             return decision.model_copy(update={"slots": slots})
 
         # loopback: main agent re-enters with a note explaining what it needs
-        context = AdvisorContext(
+        context = TurnContext(
             message=context.message,
             role=context.role,
             history=context.history,
@@ -254,5 +254,5 @@ def run_turn(context: AdvisorContext, max_loops: int = 3) -> MainAgentDecision:
     raise RuntimeError("run_turn called with max_loops < 1")
 
 if __name__ == "__main__":
-    ctx = AdvisorContext(message="Can we schedule an interview?", role="Python Developer", history=[])
+    ctx = TurnContext(message="Can we schedule an interview?", role="Python Developer", history=[])
     print(run_turn(ctx))

@@ -20,7 +20,7 @@ def generate_info_feedback(
     main_agent_note: str | None = None,
 ) -> InfoAdvisorFeedback:
 
-    llm = build_chat_llm(temperature=0)
+    llm = build_chat_llm(temperature=0) # Should deterministically extract data from the job description.
     structured_llm = llm.with_structured_output(InfoAdvisorFeedback)
     role_text = role or "the role"
     history_text = format_conversation_history(history or [])

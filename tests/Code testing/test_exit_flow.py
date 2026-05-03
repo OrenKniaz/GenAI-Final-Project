@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from app.modules.agent_router import Action, AdvisorContext, MainAgentDecision, run_turn
+from app.modules.agent_router import Action, TurnContext, MainAgentDecision, run_turn
 from app.modules.exit_advisor import ExitAdvisorFeedback
 
 
@@ -23,7 +23,7 @@ class _FakeLLM:
 
 class TestExitFlow(unittest.TestCase):
     def test_clear_exit_routes_to_final_end(self):
-        context = AdvisorContext(
+        context = TurnContext(
             message="I am not interested anymore, thanks.",
             role="Python Developer",
             history=[],
@@ -51,7 +51,7 @@ class TestExitFlow(unittest.TestCase):
         self.assertIsNone(result.slots)
 
     def test_clear_continue_routes_to_final_continue(self):
-        context = AdvisorContext(
+        context = TurnContext(
             message="I still have a few questions about the role.",
             role="Python Developer",
             history=[],
@@ -79,7 +79,7 @@ class TestExitFlow(unittest.TestCase):
         self.assertIsNone(result.slots)
 
     def test_ambiguous_exit_phrasing_loops_back_before_final_end(self):
-        context = AdvisorContext(
+        context = TurnContext(
             message="I don't know, maybe...",
             role="Python Developer",
             history=["Candidate: I am not sure this is for me."],
