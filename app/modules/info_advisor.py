@@ -1,83 +1,85 @@
-# temporary module to decide info action, to be turned agentic later.
+from pydantic import BaseModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.modules.Helpers.llm_helper import build_chat_llm
-
 from app.modules.Helpers.history_helper import format_conversation_history
 
-# function to generate the info reponse based on message\role\history
-def generate_info_response(
+
+class InfoAdvisorFeedback(BaseModel):
+    info_needed: bool
+    draft_reply: str
+    rationale: str
+
+
+def generate_info_feedback(
     message: str,
     role: str | None = None,
     history: list[str] | None = None,
     first_name: str | None = None,
     last_name: str | None = None,
-) -> str:
-    
-    
-    llm = build_chat_llm(temperature=0) # temp = 0 for determinstic response, stick to the job descritpion source.
+    main_agent_note: str | None = None,
+) -> InfoAdvisorFeedback:
 
+    llm = build_chat_llm(temperature=0)
+    structured_llm = llm.with_structured_output(InfoAdvisorFeedback)
     role_text = role or "the role"
     history_text = format_conversation_history(history or [])
     candidate_name = " ".join(part for part in [first_name, last_name] if part) or "the candidate"
-    
-    messages = [  # not only system\user, inclued also "few shot learning\promption"
-        SystemMessage(
-            content=(
-                "You are a recruiting information advisor for a hiring workflow.\n"
-                "Your job is to answer candidate questions about the role briefly and clearly.\n"
-                "If the question is about the role, answer at a high level.\n"
-                "Do not invent company-specific facts.\n"
-                "If you are unsure, say you do not have confirmed details.\n"
-                "When a candidate first name is provided, you may use it naturally for a light personal touch, but not in every sentence.\n"
-                "When appropriate, gently encourage the candidate toward next steps such as scheduling."
-        )
-    ),
+    note_text = f"\nMain agent note: {main_agent_note}" if main_agent_note else ""
 
-        HumanMessage(
-            content=(
-                "Role: Python Developer\n"
-                "Candidate question: What does this role focus on?"
-        )
-    ),
-        AIMessage(
-            content=(
-                "This role focuses on building and maintaining Python-based software, "
-                "working with technical systems, and collaborating with the team to solve development tasks. "
-                "If you'd like, I can also help with next steps in the process."
-        )
-    ),
+    messages = [
+        SystemMessage(content=(
+            "You are a recruiting information advisor for a hiring workflow.\n"
+            "Decide whether the candidate's message requires a role information response.\n"
+            "Set info_needed to true when the candidate asks about the role, responsibilities, requirements, or the process.\n"
+            "When info_needed is true, provide a brief, clear draft_reply answering the question.\n"
+            "When info_needed is false, set draft_reply to an empty string.\n"
+            "Do not invent company-specific facts. If unsure, say you do not have confirmed details.\n"
+            "Always provide a short rationale explaining your decision.\n"
+            "When a candidate first name is provided, you may use it naturally but not in every sentence.\n"
+            "Set info_needed to false when the message is a greeting, acknowledgment, scheduling intent, or exit intent.\n"
+            "When info_needed is false, set draft_reply to an empty string.\n"
+            "Always provide a short rationale explaining your decision.\n"
+        )),
 
-        HumanMessage(
-            content=(
-                "Role: Python Developer\n"
-                "Candidate question: Do I need to know every framework already?"
-        )
-    ),
-        AIMessage(
-            content=(
-                "Not necessarily every framework. Strong Python fundamentals and relevant development experience "
-                "are usually the most important starting point. If you want, I can also help guide you toward scheduling."
-        )
-    ),
+        # info_needed = true
+        HumanMessage(content="Candidate: Alex\nRole: Python Developer\nCandidate question: What does this role focus on?"),
+        AIMessage(content='{"info_needed": true, "draft_reply": "This role focuses on building Python-based software and collaborating with the team on development tasks.", "rationale": "Candidate asked a direct role question."}'),
 
-        HumanMessage(
-            content=(
-                f"Candidate: {candidate_name}\n"
-                f"Role: {role_text}\n"
-                f"{history_text}\n"
-                f"Candidate question: {message}"
-        )
-    ),
+        HumanMessage(content="Candidate: Alex\nRole: Python Developer\nCandidate question: Do I need to know every framework already?"),
+        AIMessage(content='{"info_needed": true, "draft_reply": "Not necessarily — strong Python fundamentals and relevant experience are the most important starting point.", "rationale": "Candidate asked about role requirements."}'),
+
+        # info_needed = false
+        HumanMessage(content="Candidate: Jordan\nRole: Python Developer\nCandidate question: Ok, sounds good!"),
+        AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Candidate acknowledged information, no role question asked."}'),
+
+        HumanMessage(content="Candidate: Sam\nRole: Python Developer\nCandidate question: Can we set up an interview?"),
+        AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Candidate is asking to schedule, not asking about role information."}'),
+
+        HumanMessage(content="Candidate: Sam\nRole: Python Developer\nCandidate question: Can we set up an interview?"),
+        AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Candidate is requesting to schedule, not asking for role information."}'),
+
+        HumanMessage(content="Candidate: Jordan\nRole: Python Developer\nCandidate question: Ok, sounds good!"),
+        AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Acknowledgment message, no role question asked."}'),
+
+        HumanMessage(content=(
+            f"Candidate: {candidate_name}\n"
+            f"Role: {role_text}\n"
+            f"{history_text}"
+            f"{note_text}\n"
+            f"Candidate question: {message}"
+        )),
     ]
 
-    response = llm.invoke(messages)
-    if isinstance(response.content, str):
-        return response.content
-
-    return str(response.content)
+    response = structured_llm.invoke(messages)
+    if isinstance(response, dict):
+        return InfoAdvisorFeedback(
+            info_needed=response.get("info_needed", True),
+            draft_reply=response.get("draft_reply", ""),
+            rationale=response.get("rationale", ""),
+        )
+    return response
 
 
 if __name__ == "__main__":
-    question = "Can you tell me more about the Python Developer role?"
-    print(generate_info_response(question, role="Python Developer"))
+    print(generate_info_feedback("Can you tell me more about the Python Developer role?", role="Python Developer"))

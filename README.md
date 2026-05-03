@@ -1,40 +1,57 @@
-# GenAI-Final-Project
+# GenAI Final Project
 
 ## Project Goal
 
-This project builds a Python-based recruiting chatbot. The bot should decide whether to continue the conversation, schedule an interview, or end the conversation.
+This repository contains a Streamlit proof of concept for an SMS-style recruiting chatbot for a Python Developer role. The assignment target is a main agent that decides whether to `continue`, `schedule`, or `end`, supported by three advisor agents plus external data sources.
 
-The app uses:
-- Python
-- LangChain
-- OpenAI API
-- SQL Server for interview availability
-- Streamlit for the frontend
+## Assignment Alignment Snapshot
 
-## Current Status
+Implemented now:
+- Streamlit intake form captures candidate name and role before chat starts.
+- Main-agent routing exists in `app/modules/agent_router.py` and delegates to exit, schedule, or info advisors.
+- All three advisors use LangChain plus OpenAI structured outputs.
+- Shared history is passed through the backend turn contract.
+- SQL availability lookup is role-aware, limited to the nearest 3 slots, formatted into human-readable suggestions, and supports candidate-proposed times with exact-slot confirmation or nearest alternatives.
+- Exit flow coverage now includes clear exit, clear continue, and ambiguous loopback cases through the final main-agent flow.
+- Candidate-proposed time handling is implemented and covered by direct schedule-advisor tests plus conversation-service coverage.
+- Backend smoke execution works through `app.main`.
 
-- Phase 1 shared foundations are complete, including the Slice 7 intake flow and Slice 8 role authority.
-- Streamlit now starts with an intake form that captures first name, last name, and role before chat begins.
-- The intake-provided role is the only source of truth; the backend never infers role from message text.
-- The chat UI preserves multi-turn history and uses a fixed bottom chat input with lightweight UI polish.
-- A sidebar shows the current role and allows changing it through an explicit selectbox control.
-- Phase 3 info-advisor work is in progress.
-- `.env` is set up locally.
-- `app/config.py` loads environment settings.
-- `app/modules/Helpers/sql_helper.py` connects to the `Tech` database and returns available slots.
-- `app/modules/agent_router.py` contains the current prototype routing logic and exposes `route_message()`.
-- `app/modules/conversation_service.py` now uses a shared turn contract, carries intake-provided role and candidate name data, normalizes `Python Developer` to the SQL-facing `Python Dev` value, treats the intake role as authoritative (no inference from message text), and sends `continue` turns through the OpenAI-backed info advisor.
-- `app/modules/Helpers/llm_helper.py` centralizes `ChatOpenAI` construction.
-- `app/modules/Helpers/history_helper.py` formats shared conversation history for advisor prompts.
-- `app/modules/info_advisor.py` now uses LangChain/OpenAI to generate role answers with its own system prompt, few-shot examples, shared conversation-history context, and optional candidate-name personalization.
-- `app/main.py` and `streamlit_app/streamlit_main.py` both go through the same `process_candidate_turn()` backend flow.
-- `streamlit_app/streamlit_main.py` now preserves multi-turn chat history in `st.session_state`, captures intake details before chat, renders candidate and assistant turns in chat-style UI, shows the latest candidate message immediately, and displays an assistant-side `Thinking...` spinner while the model response is generated.
-- Backend smoke verification passes.
-- Streamlit manual verification passes, including contextual follow-up behavior through the info advisor.
-- `tests/Code testing/test_conversation_service.py` now covers schedule, end, continue, advisor precedence, role normalization, carried-forward role state, neutral follow-up behavior, and the Slice 8 contract that intake role is used as-is and message text cannot change the resolved role.
-- Chroma, retrieval, and grounded job-description answers are planned for later phases.
+Still missing or not assignment-aligned:
+- The info advisor does not yet ingest the job-description PDF or retrieve grounded facts from Chroma.
+- `sms_conversations.json` is not yet used for evaluation.
+- No `test_evals.ipynb`, accuracy/confusion-matrix pipeline, or exit-advisor fine-tuning artifacts are in the repo.
+- The Streamlit UI currently allows the role to be changed after intake, which weakens the Mermaid flow's fixed-known-role assumption.
 
-## `.env` Format
+## Current Verification
+
+Latest checks on 2026-05-03:
+- `app.main` passed.
+- `tests/Code testing/test_conversation_service.py` passed with 19 tests.
+- `tests/Code testing/test_exit_flow.py` passed.
+- `tests/Code testing/test_agent_router.py` passed.
+
+## Current Architecture
+
+- `app/modules/conversation_service.py` builds the shared turn contract and calls the main agent.
+- `app/modules/agent_router.py` is the main agent. It chooses one advisor per pass, supports loopback, and returns the final action plus reply.
+- `app/modules/exit_advisor.py` decides whether the conversation should end.
+- `app/modules/schedule_advisor.py` decides whether scheduling is appropriate, interprets candidate-proposed times against the seeded SQL calendar, and fetches exact or nearest slots from SQL.
+- `app/modules/info_advisor.py` answers role/process questions, but it is currently prompt-only and not retrieval-backed.
+- `streamlit_app/streamlit_main.py` provides the proof-of-concept UI.
+
+## Data Sources
+
+- `Database/db_Tech.sql`
+	- Used today for schedule lookup.
+	- Queried through a normalized-role path for schedule suggestions.
+- `Database/sms_conversations.json`
+	- Present in the repo.
+	- Not yet consumed by an evaluation script or notebook.
+- `Database/Job descriptions/Python Developer Job Description.pdf`
+	- Present in the repo.
+	- Not yet ingested into prompts, embeddings, or Chroma retrieval.
+
+## Environment
 
 Use a local `.env` file with this shape:
 
@@ -48,33 +65,65 @@ CHROMA_PERSIST_DIR=./chroma_db
 
 The `.env` file itself is ignored by Git.
 
-## Project Structure
+## Local Setup
 
-- `app/` - backend entry point and config loader
-- `streamlit_app/` - Streamlit frontend
-- `Database/` - SQL and sample data
-- `Docs/` - project assignment material
-
-## Notes
-
-- The config module is the single place that reads environment variables.
-- `app/main.py` is still a small startup/smoke test entry point.
-- `streamlit_app/streamlit_main.py` is the current frontend entrypoint for the demo UI.
-- `app/modules/agent_router.py` is a temporary rule-based coordinator for the first agent slice.
-- `workplan.md` is now tracked in git and reflects phase and slice status.
-- Chroma will be added later when the retrieval part of the bot is built.
-
-## Testing
-
-Run the conversation service test suite from the repo root:
+From the repo root:
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest "tests/Code testing/test_conversation_service.py"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-Run the Streamlit demo from the repo root:
+## Run Locally
+
+Smoke-check the backend:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.main
+```
+
+Run the Streamlit demo:
 
 ```powershell
 $env:PYTHONPATH="C:\GenAI Final Project"
 streamlit run streamlit_app/streamlit_main.py
 ```
+
+## Testing
+
+Run the current conversation-service suite:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest "tests/Code testing/test_conversation_service.py"
+```
+
+Run the exit-flow suite:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest "tests/Code testing/test_exit_flow.py"
+```
+
+Run the router integration suite:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest "tests/Code testing/test_agent_router.py"
+```
+
+Notes:
+- `test_conversation_service.py` exercises the live LangChain/OpenAI plus SQL-backed path.
+- `test_agent_router.py` and `test_exit_flow.py` are focused router-flow tests that mock the LLM boundary to verify orchestration behavior cheaply.
+
+## Current Status
+
+- Phases 1 through 6 are complete, including candidate-proposed time handling.
+- The next major delivery slice is the offline PDF-to-Chroma pipeline for the job description, followed by retrieval-backed grounding in the info advisor.
+- Evaluation, the required notebook, and fine-tuning remain open.
+
+## Project Structure
+
+- `app/` - backend entry point, config loader, and advisor orchestration modules
+- `streamlit_app/` - Streamlit proof-of-concept frontend
+- `Database/` - SQL seed script, labeled SMS conversations, and the job-description PDF
+- `Docs/` - assignment material and flow reference
+- `tests/` - current verification artifacts and unit tests
