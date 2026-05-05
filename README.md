@@ -16,21 +16,22 @@ Implemented now:
 - SQL availability lookup is role-aware, limited to the nearest 3 slots, formatted into human-readable suggestions, and supports candidate-proposed times with exact-slot confirmation or nearest alternatives.
 - Exit flow coverage now includes clear exit, clear continue, and ambiguous loopback cases through the final main-agent flow.
 - Candidate-proposed time handling is implemented and covered by direct schedule-advisor tests plus conversation-service coverage.
+- `tests/test_evals.ipynb` evaluates the router against `Database/sms_conversations.json` and saves row-level output to `tests/eval_results.csv`.
 - Backend smoke execution works through `app.main`.
 
 Still missing or not assignment-aligned:
 - The info advisor does not yet ingest the job-description PDF or retrieve grounded facts from Chroma.
-- `sms_conversations.json` is not yet used for evaluation.
-- No `test_evals.ipynb`, accuracy/confusion-matrix pipeline, or exit-advisor fine-tuning artifacts are in the repo.
+- Exit-advisor fine-tuning artifacts are not in the repo.
 - The Streamlit UI currently allows the role to be changed after intake, which weakens the Mermaid flow's fixed-known-role assumption.
 
 ## Current Verification
 
-Latest checks on 2026-05-03:
+Latest checks on 2026-05-05:
 - `app.main` passed.
 - `tests/Code testing/test_conversation_service.py` passed with 19 tests.
 - `tests/Code testing/test_exit_flow.py` passed.
 - `tests/Code testing/test_agent_router.py` passed.
+- `tests/test_evals.ipynb` executed on 44 candidate-turn examples: label accuracy `0.409`; slot-match accuracy on correctly labeled schedule rows with expected slots `0.000`.
 
 ## Current Architecture
 
@@ -48,7 +49,7 @@ Latest checks on 2026-05-03:
 	- Queried through a normalized-role path for schedule suggestions.
 - `Database/sms_conversations.json`
 	- Present in the repo.
-	- Not yet consumed by an evaluation script or notebook.
+	- Used by `tests/test_evals.ipynb` for router label accuracy, confusion matrix, and schedule-slot comparison.
 - `Database/Job descriptions/Python Developer Job Description.pdf`
 	- Present in the repo.
 	- Not yet ingested into prompts, embeddings, or Chroma retrieval.
@@ -112,16 +113,24 @@ Run the router integration suite:
 .\.venv\Scripts\python.exe -m unittest "tests/Code testing/test_agent_router.py"
 ```
 
+Run the dataset eval notebook:
+
+```powershell
+.\.venv\Scripts\python.exe -m ipykernel install --user --name genai-final-project --display-name "GenAI Final Project"
+.\.venv\Scripts\python.exe -m jupyter nbconvert --to notebook --execute tests/test_evals.ipynb --output test_evals.ipynb --ExecutePreprocessor.timeout=1800 --ExecutePreprocessor.kernel_name=genai-final-project
+```
+
 Notes:
 - `test_conversation_service.py` exercises the live LangChain/OpenAI plus SQL-backed path.
 - `test_agent_router.py` and `test_exit_flow.py` are focused router-flow tests that mock the LLM boundary to verify orchestration behavior cheaply.
+- `test_evals.ipynb` exercises the live backend and may take several minutes because it calls the LLM-backed router/advisors for each dataset row.
 
 ## Project Status
 
 - The core multi-agent flow is implemented and working in Streamlit.
 - Scheduling is SQL-backed, role-aware, and supports candidate-proposed times with exact-slot confirmation or nearest alternatives.
 - The info advisor is currently prompt-only and not yet retrieval-backed.
-- Evaluation, the required notebook, and fine-tuning are not implemented yet.
+- The required evaluation notebook is implemented; fine-tuning is not implemented yet.
 
 ## Project Structure
 

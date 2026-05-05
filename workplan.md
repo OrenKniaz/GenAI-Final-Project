@@ -47,9 +47,9 @@ The project should use all three important data sources in the repo, not just th
 - Streamlit starts from an intake form and captures candidate name plus role before chat begins.
 - Streamlit also allows changing the role from the sidebar after intake, which conflicts with the Mermaid flow's fixed known-role assumption.
 - Shared conversation history formatting exists, but it is plain text only and does not include speaker labels or turn timestamps.
-- `sms_conversations.json` is present in the repo but is not used by the app or an evaluator yet.
+- `sms_conversations.json` is now used by `tests/test_evals.ipynb` for router label accuracy, confusion matrix, and schedule-slot comparison.
 - The Python job description PDF is present in the repo and reserved for the later ingestion and retrieval phases.
-- No Chroma build step, retrieval layer, evaluation notebook, or fine-tuning artifacts are present in the repo.
+- No Chroma build step, retrieval layer, or fine-tuning artifacts are present in the repo.
 - Verification on 2026-05-03: `app.main` passes; `test_conversation_service.py` passes with 19 tests; `test_exit_flow.py` passes; `test_agent_router.py` passes.
 
 ## A+ Outcome
@@ -175,24 +175,24 @@ Status: `Done`
 8. `Done` Add one end-to-end verification case for each final action.
 
 ### Phase 10: Dataset Evaluation Pipeline
-Status: `TBD`
+Status: `Done`
 
-1. `TBD` Inspect `Database/sms_conversations.json` and define how one conversation turn maps to a model input.
-2. `TBD` Build a small evaluator that runs the system over the labeled examples.
-3. `TBD` Record predicted action vs. labeled action for every example.
-4. `TBD` Compute overall accuracy.
-5. `TBD` Compute a confusion matrix.
-6. `TBD` Use difficult cases from the dataset as prompt examples or failure-analysis examples where appropriate.
-7. `TBD` Save intermediate evaluation outputs in a clean, reusable form.
+1. `Done` Inspect `Database/sms_conversations.json` and define how one conversation turn maps to a model input.
+2. `Done` Build a small evaluator that runs the system over the labeled examples.
+3. `Done` Record predicted action vs. labeled action for every example.
+4. `Done` Compute overall accuracy.
+5. `Done` Compute a confusion matrix.
+6. `Done` Use difficult cases from the dataset as prompt examples or failure-analysis examples where appropriate.
+7. `Done` Save intermediate evaluation outputs in a clean, reusable form.
 
 ### Phase 11: Required Evaluation Notebook
-Status: `TBD`
+Status: `Done`
 
-1. `TBD` Create `test_evals.ipynb` in the required test area.
-2. `TBD` Load evaluation outputs into the notebook.
-3. `TBD` Show accuracy numerically.
-4. `TBD` Plot or display the confusion matrix.
-5. `TBD` Add a short failure analysis section with a few representative misses from `sms_conversations.json`.
+1. `Done` Create `test_evals.ipynb` in the required test area.
+2. `Done` Load evaluation outputs into the notebook.
+3. `Done` Show accuracy numerically.
+4. `Done` Plot or display the confusion matrix.
+5. `Done` Add a short failure analysis section with a few representative misses from `sms_conversations.json`.
 
 ### Phase 12: Fine-Tuning Slice For Exit Advisor
 Status: `TBD`
@@ -221,7 +221,7 @@ Status: `In progress`
 3. `Done` Add basic usage examples for the demo flow.
 4. `Done` Document the project structure and what each major module does.
 5. `Done` Document how `sms_conversations.json`, SQL, and the job description are each currently used or not yet used in the system.
-6. `TBD` Document how evaluation is run and where outputs are stored.
+6. `Done` Document how evaluation is run and where outputs are stored.
 
 ### Phase 15: Final Verification And Packaging
 Status: `In progress`
@@ -229,7 +229,7 @@ Status: `In progress`
 1. `Done` Run backend smoke verification.
 2. `In progress` Run Streamlit verification.
 3. `Done` Run the current unit suites (`test_conversation_service.py`, `test_exit_flow.py`, and `test_agent_router.py`) and confirm they pass.
-4. `TBD` Run evaluation and confirm accuracy/confusion matrix outputs exist.
+4. `Done` Run evaluation and confirm accuracy/confusion matrix outputs exist.
 5. `TBD` Verify the role-aware scheduling path is using the correct SQL position field.
 6. `In progress` Do a final repo cleanup pass to remove dead stubs and make the code consistent.
 
