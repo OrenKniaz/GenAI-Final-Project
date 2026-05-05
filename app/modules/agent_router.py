@@ -235,7 +235,7 @@ def _synthesize(context: TurnContext, feedback_summary: str) -> MainAgentDecisio
 def run_turn(context: TurnContext, max_loops: int = 3) -> MainAgentDecision: # don't allow router agent to call advisors more than 3 times...
     for attempt in range(max_loops):
         action = _pick_advisor(context) # read prompts - > decide which advisor to call
-        feedback_summary, slots = _call_advisor(action, context) - > call the advisor -> get his feedback
+        feedback_summary, slots = _call_advisor(action, context) # - > call the advisor -> get his feedback
         decision = _synthesize(context, feedback_summary) # read feedback - > decide confidence level ->reply\loop to advisor with note if needed
 
         if decision.confident or attempt == max_loops - 1:

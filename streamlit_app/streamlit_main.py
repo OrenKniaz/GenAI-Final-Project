@@ -2,6 +2,14 @@ import streamlit as st
 
 from app.modules.conversation_service import process_candidate_turn, CandidateTurnInput
 
+# simple function for greeting to be used after form submitted..
+def build_opening_greeting(first_name: str, role: str) -> str:
+    return (
+        f"Hi {first_name}, thanks for applying to our {role} opening. "
+        "Could you share a bit about your Python experience?"
+    )
+
+
 # set page title rules (banner) using css
 st.markdown(
     """
@@ -64,6 +72,13 @@ if not st.session_state.intake_complete:
             st.session_state.first_name = first_name.strip()
             st.session_state.last_name = last_name.strip()
             st.session_state.current_role = selected_role
+            st.session_state.chat_history = [ # add greeting message at form submission.
+                {
+                    "speaker": "recruiter",
+                    "text": build_opening_greeting(st.session_state.first_name, selected_role),
+                    "slots": None,
+                }
+            ]
             st.session_state.intake_complete = True
             st.rerun()
 else:
@@ -116,7 +131,7 @@ else:
         new_entries = [
             {"speaker": "candidate", "text": message, "slots": None},
             {
-                "speaker": "assistant",
+                "speaker": "recruiter",
                 "text": result.assistant_message,
                 "slots": result.slots if result.show_slots else None,
             },
