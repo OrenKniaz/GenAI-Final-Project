@@ -76,6 +76,7 @@ if not st.session_state.intake_complete:
                 {
                     "speaker": "recruiter",
                     "text": build_opening_greeting(st.session_state.first_name, selected_role),
+                    "label": "continue",
                     "slots": None,
                 }
             ]
@@ -129,10 +130,11 @@ else:
                     st.write(slot)
 
         new_entries = [
-            {"speaker": "candidate", "text": message, "slots": None},
+            {"speaker": "candidate", "text": message, "label": None, "slots": None},
             {
                 "speaker": "recruiter",
                 "text": result.assistant_message,
+                "label": result.action,
                 "slots": result.slots if result.show_slots else None,
             },
         ]
