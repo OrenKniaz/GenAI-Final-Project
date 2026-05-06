@@ -33,7 +33,8 @@ Latest checks on 2026-05-06:
 - `tests/test_evals.ipynb` executed on 44 candidate-turn examples.
 - Baseline eval from commit `191339d`: label accuracy `18/44` = `0.409`.
 - Best prompt/advisor-alignment eval: label accuracy `35/44` = `0.795`.
-- Final prompt-tuning eval: label accuracy `34/44` = `0.773`; schedule-slot match on correctly labeled schedule rows `4/17` = `0.235`.
+- Final `gpt-4o-mini` prompt-tuning eval: label accuracy `34/44` = `0.773`; schedule-slot match on correctly labeled schedule rows `4/17` = `0.235`.
+- Changing the chat model from `gpt-4o-mini` to `gpt-5.4-mini-2026-03-17` improved label accuracy to `39/44` = `0.886`; schedule-slot match was `4/19` = `0.211`.
 
 The largest improvement came from aligning the schedule, info, exit, and synthesis prompts with the router policy. The schedule advisor now supports the selected scheduling path instead of vetoing qualification answers back to `continue`.
 
@@ -64,7 +65,7 @@ Use a local `.env` file with this shape:
 
 ```env
 OPENAI_API_KEY=your_openai_key
-OPENAI_CHAT_MODEL=gpt-4o-mini
+OPENAI_CHAT_MODEL=gpt-5.4-mini-2026-03-17
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 SQL_SERVER_CONNECTION_STRING=your_sql_server_connection_string
 CHROMA_PERSIST_DIR=./chroma_db
