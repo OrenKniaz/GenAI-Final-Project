@@ -19,7 +19,7 @@ class TurnContext:
     first_name: str | None = None
     last_name: str | None = None
     main_agent_note: str | None = None  # empty on first pass; populated on loopback
-
+    reference_datetime_utc: str | None = None
 
 # Internal routing types
 
@@ -53,40 +53,73 @@ def _pick_advisor(context: TurnContext) -> Action:
 
     messages = [
         SystemMessage(content=(
-            "You are a recruiting router for a hiring workflow.\n"
-            "Classify the candidate's latest message into exactly one routing action.\n"
-            "Use 'continue' for general conversation, role-information questions, or interest that does not request scheduling.\n"
-            "Use 'schedule' when the candidate is trying to arrange an interview, asking about available times, or trying to book the next step.\n"
-            "Use 'end' when the candidate clearly wants to stop or is no longer interested.\n"
-            "If a message contains both scheduling language and a clear desire to stop, choose 'end'.\n"
-            "If unsure, choose 'continue'."
+            "You are the routing policy for a recruiter.\n"
+            "Return exactly one action: continue, schedule, or end.\n"
+            "Route the next recruiter action. Do not write a friendly reply in your head and route from that tone.\n"
+            "Decision order:\n"
+            "1. end: choose only when the candidate clearly opts out, asks to stop, says they are not interested, or clearly accepts/confirms a concrete interview time in an active scheduling flow.\n"
+            "2. continue: choose when the candidate asks a role-related question, or gives a weak/partial qualification answer that needs one more screening follow-up before scheduling.\n"
+            "3. schedule: choose for everything else when the candidate is still engaged.\n"
+            "Schedule is the default for ambiguous or non-question messages.\n"
+            "Strong qualification answers, experience summaries, positive reactions, short acknowledgements, interest, readiness, and availability problems are schedule.\n"
+            "Rejected or unavailable times are schedule unless the candidate clearly asks to stop or says they are not interested.\n"
+            "If the candidate says they may follow up later because a proposed time is unavailable, still choose schedule unless there is an explicit stop signal.\n"
+            "Phrases like 'I'll reach out later', 'I'll reconnect', 'I'll reach out if it becomes relevant', or 'if another time is relevant' are not end signals by themselves when the candidate is only rejecting a proposed time.\n"
+            "Accepted or confirmed interview times are end, because the recruiter should close with confirmation.\n"
+            "If there is any doubt between continue and schedule, choose schedule.\n"
         )),
-        HumanMessage(content="Role: Python Developer\nCandidate question: What does this role focus on?"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: What does this role focus on day to day?"),
         AIMessage(content='{"action": "continue"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: Do I need to know every framework already?"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Is this remote, hybrid, or office based?"),
         AIMessage(content='{"action": "continue"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: Not interested anymore, thanks"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: I am interested, but what technologies does the team use?"),
+        AIMessage(content='{"action": "continue"}'),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: I have 3 years of experience, is that enough for this role?"),
+        AIMessage(content='{"action": "continue"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter asked how long the candidate has used Python.\nCandidate prompt: I only have a few months of Python experience, but I am eager to learn quickly."),
+        AIMessage(content='{"action": "continue"}'),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Not interested anymore, thanks"),
         AIMessage(content='{"action": "end"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: I\'m interested"),
-        AIMessage(content='{"action": "continue"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: I\'m interested in interviewing for this role"),
-        AIMessage(content='{"action": "schedule"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: I\'m interested, but I still want to understand the role better"),
-        AIMessage(content='{"action": "continue"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: I\'m interested, goodbye"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Please stop contacting me."),
         AIMessage(content='{"action": "end"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: Bye, can we schedule an interview?"),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered Tuesday at 10:00 and Wednesday at 14:00.\nCandidate prompt: Tuesday at 10 works for me."),
         AIMessage(content='{"action": "end"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: Can we set up an interview for next week?"),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered Wednesday at 10:00 or Thursday at 14:00.\nCandidate prompt: Wednesday at 10 AM works for me."),
+        AIMessage(content='{"action": "end"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter asked which interview time works best.\nCandidate prompt: Monday at 3 PM is good."),
+        AIMessage(content='{"action": "end"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered a morning interview slot.\nCandidate prompt: That time sounds good."),
+        AIMessage(content='{"action": "end"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter asked what Python projects the candidate has built recently.\nCandidate prompt: I have several years of Python experience, mostly building internal tools and data services."),
         AIMessage(content='{"action": "schedule"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: What times do you have available?"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: I mostly build backend services in Python and SQL."),
         AIMessage(content='{"action": "schedule"}'),
-        HumanMessage(content="Role: Python Developer\nCandidate question: This sounds good, but I have one more question first"),
-        AIMessage(content='{"action": "continue"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter asked about cloud experience.\nCandidate prompt: I have used AWS for small deployments, but not GCP yet."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Yes, about three years of experience."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Sounds interesting, I can handle it."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: That sounds fine."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Can we set up an interview for next week?"),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered a few interview times.\nCandidate prompt: None of those times work for me."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered Thursday afternoon.\nCandidate prompt: Thursday is not good for me."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered an interview time.\nCandidate prompt: I am unavailable then because I have other commitments."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered Tuesday morning for an interview.\nCandidate prompt: I cannot do that time because I have another commitment. I can reconnect if another time is relevant."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered an interview slot.\nCandidate prompt: I am unavailable at that time, but I can reach out later if another option becomes relevant."),
+        AIMessage(content='{"action": "schedule"}'),
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered an interview slot.\nCandidate prompt: I am unavailable at that time because I have other commitments. I will reach out if it becomes relevant."),
+        AIMessage(content='{"action": "schedule"}'),
         HumanMessage(content=(
             f"Role: {role_text}\n"
             f"{history_text}\n"
-            f"Candidate question: {context.message}"
+            f"Candidate prompt: {context.message}"
         )),
     ]
 
@@ -112,7 +145,7 @@ def _call_advisor(action: Action, context: TurnContext) -> tuple[str, list[str] 
         return f"Exit advisor: exit_match={fb.exit_match}, rationale={fb.rationale}", None
 
     if action == Action.SCHEDULE:
-        fb = get_schedule_feedback(context.message, context.role, context.history, context.main_agent_note)
+        fb = get_schedule_feedback(context.message, context.role, context.history, context.main_agent_note, context.reference_datetime_utc)
         slots = ", ".join(fb.slots) if fb.slots else "none"
         return (
             "Schedule advisor: "
@@ -150,13 +183,19 @@ def _synthesize(context: TurnContext, feedback_summary: str) -> MainAgentDecisio
     response = structured_llm.invoke([
         SystemMessage(content=(
             "You are the main recruiting agent. You received structured feedback from one advisor.\n"
-            "Decide the final action and write the final candidate-facing reply.\n"
+            "Write the final candidate-facing reply and keep the final action aligned with the advisor feedback.\n"
+            "Main policy: prefer schedule unless it is 90% clear the candidate wants to end or asked a genuine information question.\n"
+            "If advisor feedback starts with 'Schedule advisor' and schedule_match=True, set action to schedule and offer the provided slots.\n"
+            "If advisor feedback starts with 'Exit advisor' and exit_match=True, set action to end and close kindly.\n"
+            "If advisor feedback starts with 'Info advisor' and info_needed=True, set action to continue and answer the question.\n"
+            "Do not turn a schedule advisor result with slots into a continue reply.\n"
             "Set confident to true if you have enough to reply clearly.\n"
             "When confident is false, populate clarification_needed with a specific question explaining what the advisor needs to resolve, e.g. 'Unclear whether candidate wants to end or just pause — please clarify intent.'\n"
             "Set confident to false only if the feedback is contradictory or clearly insufficient.\n"
             "Keep the reply brief and SMS-friendly (1-3 sentences). be polite and kind\n"
             "Do not mention advisors or internal routing to the candidate.\n"
             "Treat dates and times in schedule advisor feedback as authoritative seeded SQL calendar values. Do not reinterpret them using the real current date.\n"
+            "When suggesting slots, especially when it is not clear between continue or schedule, be kind and mention that more information can be discussed during the interview.\n"
         )),
         # Example: continue
         HumanMessage(content=(
@@ -185,7 +224,23 @@ def _synthesize(context: TurnContext, feedback_summary: str) -> MainAgentDecisio
         AIMessage(content=(
             '{"action": "schedule", "reply": "Absolutely, Jordan! Here are a few available slots: '
             'Tuesday, 2024-01-02 at 09:00, Tuesday, 2024-01-02 at 11:00, or Wednesday, 2024-01-03 at 14:00. '
-            'Let me know which works best for you!", "confident": true}'
+            'Let me know which works best for you! or if you need more options, I\'m here to help.", "confident": true}'
+        )),
+
+        HumanMessage(content=(
+            "Candidate name: Riley\n"
+            "Role: Python Developer\n"
+            "Conversation history: Recruiter asked about Python project experience.\n"
+            "Candidate message: I have several years of Python experience building internal data tools.\n"
+            "Advisor feedback: Schedule advisor: schedule_match=True, reference_date=2024-01-02, "
+            "requested_time_text=None, requested_slot_text=None, requested_slot_available=None, "
+            "rationale=Candidate answered the screening question and stayed engaged, "
+            "slots=[Wednesday, 2024-01-03 at 10:00, Thursday, 2024-01-04 at 14:00]"
+        )),
+        AIMessage(content=(
+            '{"action": "schedule", "reply": "Thanks for sharing, Riley. Your Python experience sounds relevant, '
+            'and more details can be discussed in the interview. The available slots are Wednesday, 2024-01-03 at 10:00 '
+            'or Thursday, 2024-01-04 at 14:00. Which works best?", "confident": true}'
         )),
 
         # Example: end
@@ -198,6 +253,18 @@ def _synthesize(context: TurnContext, feedback_summary: str) -> MainAgentDecisio
         )),
         AIMessage(content=(
             '{"action": "end", "reply": "Totally understood, Sam. Thanks so much for your time and best of luck with your search!", '
+            '"confident": true}'
+        )),
+
+        HumanMessage(content=(
+            "Candidate name: Casey\n"
+            "Role: Python Developer\n"
+            "Conversation history: Recruiter offered Tuesday at 10:00 or Wednesday at 14:00 for an interview.\n"
+            "Candidate message: Tuesday at 10 works for me.\n"
+            "Advisor feedback: Exit advisor: exit_match=True, rationale=Candidate accepted a specific proposed interview slot."
+        )),
+        AIMessage(content=(
+            '{"action": "end", "reply": "Great, Casey. Tuesday at 10:00 is confirmed, and you will receive the calendar invite shortly.", '
             '"confident": true}'
         )),
         # loopback example
@@ -248,6 +315,7 @@ def run_turn(context: TurnContext, max_loops: int = 3) -> MainAgentDecision: # d
             history=context.history,
             first_name=context.first_name,
             last_name=context.last_name,
+            reference_datetime_utc=context.reference_datetime_utc,
             main_agent_note=decision.clarification_needed or "Please provide more detail.",
         )
      # unreachable — only here to satisfy type checker if max_loops were ever 0

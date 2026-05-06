@@ -40,12 +40,13 @@ def _format_slot(slot) -> str:
     time_text = slot_time.strftime("%H:%M")
     return f"{weekday}, {slot_date.isoformat()} at {time_text}"
 
-# get the slots
+# build the feedback from the schedule advisor
 def get_schedule_feedback(
     message: str,
     role: str | None = None,
     history: list[str] | None = None,
     main_agent_note: str | None = None,
+    reference_datetime_utc: str | None = None,
 ) -> ScheduleAdvisorFeedback:
     
     llm = build_chat_llm(temperature=0) # determanstic decision, can't make up slots...
@@ -53,64 +54,81 @@ def get_schedule_feedback(
     role_text = role or "the role"
     history_text = format_conversation_history(history or [])
     note_text = f"\nMain agent note: {main_agent_note}" if main_agent_note else ""
-
     normalized_role = normalize_role(role) # get role name that matches SQL DB
+    # use SQL time or json eval time and get slots
+    reference_date = None
+    if reference_datetime_utc:
+        try:
+            reference_date = dt.date.fromisoformat(reference_datetime_utc[:10])
+        except ValueError:
+            reference_date = None
+    else:
+        reference_date = (
+            get_schedule_reference_date(normalized_role)
+            if normalized_role
+            else None
+        )
 
-    # Get avaialble slots for this role, using SQL Helper.
-    reference_date = (
-        get_schedule_reference_date(normalized_role)
-        if normalized_role
-        else None
-    )
-    # Format reference date for prompt; if unavailable, indicate it's unknown.
     reference_date_text = (
         reference_date.isoformat()
         if reference_date is not None
         else "unknown"
     )
 
+    # start prompt..
     messages = [
         SystemMessage(
             content=(
                 "You are a scheduling advisor for a recruiting workflow.\n"
-                "Decide whether the candidate's latest message indicates they want to schedule an interview.\n"
-                "Set schedule_match to true when the candidate asks about times, availability, booking, or next steps that imply scheduling.\n"
-                "Set schedule_match to false when the candidate is asking role questions, expressing general interest, or wants more info first.\n"
+                "You are called after the router has already selected the scheduling path.\n"
+                "Your main job is to extract requested time details and provide SQL-backed interview slots.\n"
+                "Prefer schedule_match true unless it is 90% clear the candidate is asking a genuine information question or wants to end.\n"
+                "Set schedule_match to true for qualification answers, experience summaries, positive reactions, readiness, interest, availability problems, rejected slots, and direct scheduling requests.\n"
+                "Set schedule_match to false only when the candidate asks a concrete role/process/requirements question that should be answered before scheduling, or clearly opts out.\n"
                 "This demo uses a seeded SQL schedule calendar.\n"
-                "Interpret time phrases relative to the provided SQL reference date and recent conversation context.\n"
+                "Interpret time phrases relative to the provided schedule reference date and recent conversation context.\n"
                 "Distinguish Tuesday from next Tuesday.\n"
-                "Interpret tomorrow relative to the SQL reference date.\n"
+                "Interpret tomorrow relative to the provided schedule reference date.\n"
                 "If a concrete slot is inferred, return requested_slot_text in strict format YYYY-MM-DD HH:MM (24-hour).\n"
-                "Interpret scheduling relative to the provided schedule reference date, not the real current date.\n"
                 f"Schedule reference date for this role: {reference_date_text}\n"
-                "If the message is ambiguous, prefer false.\n"
+                "If the message is ambiguous, prefer true and offer slots.\n"
                 "Always provide a short rationale explaining your decision.\n"
             )
         ),
-        HumanMessage(content="Role: Python Developer\nCandidate question: What does this role focus on?"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: What does this role focus on?"),
         AIMessage(content='{"schedule_match": false, "rationale": "Candidate asked a role question, not requesting a time."}'),
 
-        HumanMessage(content="Role: Python Developer\nCandidate question: I am interested but need more info first."),
-        AIMessage(content='{"schedule_match": false, "rationale": "Candidate wants more info before scheduling."}'),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: I am interested, but what tools does the team use?"),
+        AIMessage(content='{"schedule_match": false, "rationale": "Candidate asked a concrete information question before scheduling."}'),
 
-        HumanMessage(content="Role: Python Developer\nCandidate question: Can we set up an interview?"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Can we set up an interview?"),
         AIMessage(content='{"schedule_match": true, "rationale": "Candidate explicitly asked to set up an interview."}'),
 
-        HumanMessage(content="Role: Python Developer\nCandidate question: What times are available?"),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: What times are available?"),
         AIMessage(content='{"schedule_match": true, "rationale": "Candidate asked about available times — clear scheduling intent."}'),
 
-        HumanMessage(content="Role: Python Developer\nCandidate question: I would like to book the next step."),
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: I would like to book the next step."),
         AIMessage(content='{"schedule_match": true, "rationale": "Candidate explicitly said they want to book the next step."}'),
-        # Ambiguous
-        HumanMessage(content="Role: Python Developer\nCandidate question: I think I'm ready."),
-        AIMessage(content='{"schedule_match": false, "rationale": "Ambiguous — readiness expressed but no explicit scheduling request. Defaulting to false."}'),
+
+        # Qualification answers should move to scheduling unless they ask a real question.
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter asked what Python projects the candidate has worked on.\nCandidate prompt: I have several years of Python experience building dashboards and automation."),
+        AIMessage(content='{"schedule_match": true, "rationale": "Candidate answered the recruiter screening question and stayed engaged, so offer interview slots."}'),
+
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: I mostly work with backend services and SQL."),
+        AIMessage(content='{"schedule_match": true, "rationale": "Candidate provided relevant qualifications without asking for more information."}'),
+
+        HumanMessage(content="Role: Python Developer\nCandidate prompt: Sounds interesting, I can handle it."),
+        AIMessage(content='{"schedule_match": true, "rationale": "Candidate reacted positively and did not ask a blocking question."}'),
+
+        HumanMessage(content="Role: Python Developer\nRecent conversation:\nRecruiter offered a few interview times.\nCandidate prompt: None of those times work for me."),
+        AIMessage(content='{"schedule_match": true, "rationale": "Candidate rejected the proposed slots but did not opt out, so offer new slots."}'),
 
         # Loopback
         HumanMessage(content=(
             "Role: Python Developer\n"
             "Conversation history: Candidate previously said they are interested and have no more questions.\n"
             "Main agent note: Candidate said they are ready but intent is unclear — please check history for scheduling signal.\n"
-            "Candidate question: I think I'm ready."
+            "Candidate prompt: I think I'm ready."
         )),
         AIMessage(content='{"schedule_match": true, "rationale": "Conversation history shows no remaining questions and readiness — scheduling intent is likely."}'),
         HumanMessage(
@@ -118,7 +136,7 @@ def get_schedule_feedback(
                 f"Role: {role_text}\n"
                 f"{history_text}\n"
                 f"{note_text}\n"
-                f"Candidate question: {message}"
+                f"Candidate prompt: {message}"
             )
         ),
     ]
@@ -140,6 +158,7 @@ def get_schedule_feedback(
     slots = None #initialize as none, only set if we have schedule_match and a normalized role to check against SQL for available slots
 
     if schedule_match and normalized_role: # LLM indicated a scheduleing event, and we have a normalized role - > go to SQL to get slots..
+
         if requested_slot_text: # if candidate asked for a specific slot\time, check if it's available
             # Accept strict "YYYY-MM-DD HH:MM"; tolerate legacy "YYYY-MM-DD at HH:MM".
             slot_text = requested_slot_text.replace(" at ", " ").strip()
@@ -170,11 +189,11 @@ def get_schedule_feedback(
             except ValueError:
                 # If extraction format is invalid, gracefully fall back to default nearest slots.
                 requested_slot_available = False
-                raw_slots = get_available_slots(position=normalized_role)
+                raw_slots = get_available_slots(position=normalized_role, from_date=reference_date)
                 slots = [_format_slot(slot) for slot in raw_slots]
         # if no specific slot was requested, just get available slots for the role
         else:
-            raw_slots = get_available_slots(position=normalized_role)
+            raw_slots = get_available_slots(position=normalized_role, from_date=reference_date)
             slots = [_format_slot(slot) for slot in raw_slots]
 
     return ScheduleAdvisorFeedback(

@@ -14,6 +14,7 @@ class CandidateTurnInput:
     history: list[str] | None = None
     first_name: str | None = None
     last_name: str | None = None
+    reference_datetime_utc: str | None = None
 
 
 @dataclass
@@ -36,6 +37,7 @@ def process_candidate_turn(turn: CandidateTurnInput) -> CandidateTurnResult:
         history=turn.history or [],
         first_name=turn.first_name,
         last_name=turn.last_name,
+        reference_datetime_utc=turn.reference_datetime_utc,
     )
 
     decision = run_turn(context) # run the agent router (basically initiate the turn)

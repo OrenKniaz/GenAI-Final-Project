@@ -14,9 +14,11 @@ Implemented now:
 - All three advisors use LangChain plus OpenAI structured outputs.
 - Shared history is passed through the backend turn contract.
 - SQL availability lookup is role-aware, limited to the nearest 3 slots, formatted into human-readable suggestions, and supports candidate-proposed times with exact-slot confirmation or nearest alternatives.
+- Router and advisor prompts/examples are aligned around the assignment labels: default toward `schedule`, use `continue` for genuine role or screening follow-up questions, and use `end` for clear stop signals or confirmed interview slots.
+- Eval replay passes each JSON turn's `timestamp_utc` into the backend so relative date phrases are interpreted against the dataset time; live/demo scheduling still falls back to the seeded SQL calendar reference date.
 - Exit flow coverage now includes clear exit, clear continue, and ambiguous loopback cases through the final main-agent flow.
 - Candidate-proposed time handling is implemented and covered by direct schedule-advisor tests plus conversation-service coverage.
-- `tests/test_evals.ipynb` evaluates the router against `Database/sms_conversations.json` and saves row-level output to `tests/eval_results.csv`.
+- `tests/test_evals.ipynb` evaluates the router against `Database/sms_conversations.json` and saves local row-level CSV output under `tests/eval*.csv` files, which are ignored by Git.
 - Backend smoke execution works through `app.main`.
 
 Still missing or not assignment-aligned:
@@ -26,12 +28,14 @@ Still missing or not assignment-aligned:
 
 ## Current Verification
 
-Latest checks on 2026-05-05:
-- `app.main` passed.
-- `tests/Code testing/test_conversation_service.py` passed with 19 tests.
-- `tests/Code testing/test_exit_flow.py` passed.
-- `tests/Code testing/test_agent_router.py` passed.
-- `tests/test_evals.ipynb` executed on 44 candidate-turn examples: label accuracy `0.409`; slot-match accuracy on correctly labeled schedule rows with expected slots `0.000`.
+Latest checks on 2026-05-06:
+- Prompt/advisor syntax check passed with `py_compile`.
+- `tests/test_evals.ipynb` executed on 44 candidate-turn examples.
+- Baseline eval from commit `191339d`: label accuracy `18/44` = `0.409`.
+- Best prompt/advisor-alignment eval: label accuracy `35/44` = `0.795`.
+- Final prompt-tuning eval: label accuracy `34/44` = `0.773`; schedule-slot match on correctly labeled schedule rows `4/17` = `0.235`.
+
+The largest improvement came from aligning the schedule, info, exit, and synthesis prompts with the router policy. The schedule advisor now supports the selected scheduling path instead of vetoing qualification answers back to `continue`.
 
 ## Current Architecture
 

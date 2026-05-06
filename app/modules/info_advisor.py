@@ -30,14 +30,15 @@ def generate_info_feedback(
     messages = [
         SystemMessage(content=(
             "You are a recruiting information advisor for a hiring workflow.\n"
-            "Decide whether the candidate's message requires a role information response.\n"
-            "Set info_needed to true when the candidate asks about the role, responsibilities, requirements, or the process.\n"
+            "Decide whether the candidate's message requires a role information response before scheduling.\n"
+            "Prefer info_needed false unless the candidate asks a genuine information question.\n"
+            "Set info_needed to true when the candidate asks about the role, responsibilities, requirements, process, tools, remote/hybrid setup, compensation, or other concrete job details.\n"
             "When info_needed is true, provide a brief, clear draft_reply answering the question.\n"
             "When info_needed is false, set draft_reply to an empty string.\n"
             "Do not invent company-specific facts. If unsure, say you do not have confirmed details.\n"
             "Always provide a short rationale explaining your decision.\n"
             "When a candidate first name is provided, you may use it naturally but not in every sentence.\n"
-            "Set info_needed to false when the message is a greeting, acknowledgment, scheduling intent, or exit intent.\n"
+            "Set info_needed to false when the message is a greeting, acknowledgment, qualification answer, experience summary, scheduling intent, or exit intent.\n"
             "When info_needed is false, set draft_reply to an empty string.\n"
             "Always provide a short rationale explaining your decision.\n"
         )),
@@ -49,9 +50,18 @@ def generate_info_feedback(
         HumanMessage(content="Candidate: Alex\nRole: Python Developer\nCandidate question: Do I need to know every framework already?"),
         AIMessage(content='{"info_needed": true, "draft_reply": "Not necessarily — strong Python fundamentals and relevant experience are the most important starting point.", "rationale": "Candidate asked about role requirements."}'),
 
+        HumanMessage(content="Candidate: Alex\nRole: Python Developer\nCandidate question: I have three years of experience, is that enough for this role?"),
+        AIMessage(content='{"info_needed": true, "draft_reply": "Three years of relevant Python experience can be a strong fit depending on the projects you have built.", "rationale": "Candidate asked a concrete qualification question."}'),
+
         # info_needed = false
         HumanMessage(content="Candidate: Jordan\nRole: Python Developer\nCandidate question: Ok, sounds good!"),
         AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Candidate acknowledged information, no role question asked."}'),
+
+        HumanMessage(content="Candidate: Jordan\nRole: Python Developer\nCandidate question: I have several years of Python experience building backend tools."),
+        AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Candidate provided a qualification answer, not an information question."}'),
+
+        HumanMessage(content="Candidate: Jordan\nRole: Python Developer\nCandidate question: I mostly work with Python and SQL."),
+        AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Candidate summarized experience without asking a question."}'),
 
         HumanMessage(content="Candidate: Sam\nRole: Python Developer\nCandidate question: Can we set up an interview?"),
         AIMessage(content='{"info_needed": false, "draft_reply": "", "rationale": "Candidate is asking to schedule, not asking about role information."}'),

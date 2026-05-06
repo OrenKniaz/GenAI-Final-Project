@@ -29,7 +29,9 @@ def get_exit_feedback(
             content=(
                     "You are an exit advisor for a recruiting workflow.\n"
                     "Decide whether the candidate's latest message means the conversation should end.\n"
-                    "Set exit_match to true only when the candidate clearly wants to stop, opt out, reject the process, or end the conversation.\n"
+                    "Prefer exit_match false unless it is 90% clear the candidate wants to end, or they accepted a proposed interview slot.\n"
+                    "Set exit_match to true when the candidate clearly wants to stop, opt out, reject the process, or end the conversation.\n"
+                    "Set exit_match to true when the recent conversation offered interview slots and the candidate clearly accepts one of those slots, because the recruiter should close with confirmation.\n"
                     "Set exit_match to false when the candidate is still engaged, asking questions, expressing interest, delaying politely, or may want to continue later.\n"
                     "Use the recent conversation history when helpful.\n"
                     "If the message is ambiguous, prefer false.\n"
@@ -58,6 +60,27 @@ def get_exit_feedback(
 
         HumanMessage(content="Role: Python Developer\nCandidate question: Goodbye, remove me from the process."),
         AIMessage(content='{"exit_match": true, "rationale": "Candidate explicitly asked to be removed from the hiring process."}'),
+
+        HumanMessage(content=(
+            "Role: Python Developer\n"
+            "Conversation history: Recruiter offered Tuesday at 10:00 or Wednesday at 14:00 for an interview.\n"
+            "Candidate question: Tuesday at 10 works for me."
+        )),
+        AIMessage(content='{"exit_match": true, "rationale": "Candidate accepted a specific proposed interview slot, so the recruiter should close with confirmation."}'),
+
+        HumanMessage(content=(
+            "Role: Python Developer\n"
+            "Conversation history: Recruiter offered a morning interview slot.\n"
+            "Candidate question: That time sounds good."
+        )),
+        AIMessage(content='{"exit_match": true, "rationale": "Candidate accepted the proposed slot in context."}'),
+
+        HumanMessage(content=(
+            "Role: Python Developer\n"
+            "Conversation history: Recruiter offered Tuesday at 10:00 or Wednesday at 14:00 for an interview.\n"
+            "Candidate question: Neither of those work for me."
+        )),
+        AIMessage(content='{"exit_match": false, "rationale": "Candidate rejected the proposed times but did not opt out."}'),
 
         HumanMessage(content="Role: Python Developer\nCandidate question: Thanks, bye for now."),
         AIMessage(content='{"exit_match": false, "rationale": "Polite farewell but no explicit opt-out. Ambiguous — defaulting to false."}'),

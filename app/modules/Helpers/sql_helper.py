@@ -18,16 +18,18 @@ def get_available_slots(
     limit: int = 3,
     target_date: dt.date | None = None,
     target_time: dt.time | None = None,
+    from_date: dt.date | None = None,
 ):
     if target_date is None or target_time is None:
         query = """
             SELECT TOP (?) ScheduleID, [date], [time], position
             FROM dbo.Schedule
             WHERE available = 1
-              AND position = ?
+            AND position = ?
+            AND (? IS NULL OR [date] >= ?)
             ORDER BY [date], [time]
         """
-        params = (limit, position)
+        params = (limit, position, from_date, from_date)
     else:
         query = """
             SELECT TOP (?) ScheduleID, [date], [time], position

@@ -4,3 +4,4 @@
 __pycache__/
 *.pyc
 Docs/Assignment/project.md
+tests/eval*.csv
