@@ -38,6 +38,8 @@ Latest checks on 2026-05-06:
 
 The largest improvement came from aligning the schedule, info, exit, and synthesis prompts with the router policy. The schedule advisor now supports the selected scheduling path instead of vetoing qualification answers back to `continue`.
 
+We consider the current label result a reasonable stopping point for this dataset. One remaining mismatch appears semantically better than the JSON label: the candidate proposes a new appointment time, while the JSON marks the next recruiter turn as `end` without an availability check. The other remaining label misses are first-screening experience answers where the JSON itself is inconsistent: similar candidate answers are sometimes labeled `continue` for another screening follow-up and sometimes labeled `schedule`.
+
 ## Current Architecture
 
 - `app/modules/conversation_service.py` builds the shared turn contract and calls the main agent.

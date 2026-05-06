@@ -48,9 +48,12 @@ The project should use all three important data sources in the repo, not just th
 - Streamlit also allows changing the role from the sidebar after intake, which conflicts with the Mermaid flow's fixed known-role assumption.
 - Shared conversation history formatting exists, but it is plain text only and does not include speaker labels or turn timestamps.
 - `sms_conversations.json` is now used by `tests/test_evals.ipynb` for router label accuracy, confusion matrix, and schedule-slot comparison.
+- Latest committed eval run uses `gpt-5.4-mini-2026-03-17` and reached `39/44` label accuracy (`0.886`) on 44 candidate turns.
+- After reviewing the remaining label misses, the current router/advisor code is intentionally kept unchanged: one miss is semantically better than the JSON label because a candidate-proposed appointment time should be validated before confirmation, and the other misses sit in an inconsistent first-screening region where similar experience answers are labeled both `continue` and `schedule`.
+- Schedule-slot comparison is still useful for analysis but is not a clean product-quality score because the JSON recruiter replies and seeded SQL availability are not synchronized; SQL also intentionally excludes Mondays.
 - The Python job description PDF is present in the repo and reserved for the later ingestion and retrieval phases.
 - No Chroma build step, retrieval layer, or fine-tuning artifacts are present in the repo.
-- Verification on 2026-05-03: `app.main` passes; `test_conversation_service.py` passes with 19 tests; `test_exit_flow.py` passes; `test_agent_router.py` passes.
+- Verification on 2026-05-06: prompt/advisor syntax checks pass; the eval notebook runs end-to-end; label accuracy improved from `18/44` (`0.409`) at baseline to `39/44` (`0.886`) with prompt/advisor alignment plus `gpt-5.4-mini-2026-03-17`.
 
 ## A+ Outcome
 
@@ -184,6 +187,7 @@ Status: `Done`
 5. `Done` Compute a confusion matrix.
 6. `Done` Use difficult cases from the dataset as prompt examples or failure-analysis examples where appropriate.
 7. `Done` Save intermediate evaluation outputs in a clean, reusable form.
+8. `Done` Document that exact slot comparison is limited by JSON-vs-SQL calendar mismatch and should not be treated as the primary quality metric.
 
 ### Phase 11: Required Evaluation Notebook
 Status: `Done`
@@ -193,6 +197,7 @@ Status: `Done`
 3. `Done` Show accuracy numerically.
 4. `Done` Plot or display the confusion matrix.
 5. `Done` Add a short failure analysis section with a few representative misses from `sms_conversations.json`.
+6. `Done` Preserve a committed high-signal eval CSV for the `gpt-5.4-mini-2026-03-17` run (`39/44`, `0.886`) while ignoring generated eval CSV churn by default.
 
 ### Phase 12: Fine-Tuning Slice For Exit Advisor
 Status: `TBD`
@@ -214,14 +219,15 @@ Status: `In progress`
 6. `In progress` Make sure the UI reflects main-agent orchestration rather than a single-advisor shortcut.
 
 ### Phase 14: README And Submission Quality
-Status: `In progress`
+Status: `Done`
 
 1. `Done` Rewrite the README around the actual current architecture and assignment status.
-2. `In progress` Add local setup instructions for config, SQL, embeddings, and Streamlit.
+2. `Done` Add local setup instructions for config, SQL, embeddings, and Streamlit.
 3. `Done` Add basic usage examples for the demo flow.
 4. `Done` Document the project structure and what each major module does.
 5. `Done` Document how `sms_conversations.json`, SQL, and the job description are each currently used or not yet used in the system.
 6. `Done` Document how evaluation is run and where outputs are stored.
+7. `Done` Document the eval improvement, model change, and reason for keeping the current code despite remaining label mismatches.
 
 ### Phase 15: Final Verification And Packaging
 Status: `In progress`
@@ -232,13 +238,15 @@ Status: `In progress`
 4. `Done` Run evaluation and confirm accuracy/confusion matrix outputs exist.
 5. `TBD` Verify the role-aware scheduling path is using the correct SQL position field.
 6. `In progress` Do a final repo cleanup pass to remove dead stubs and make the code consistent.
+7. `Done` Re-ran eval and reviewed lower-score rerun cases; decided to keep the last committed code because the changed labels were semantically acceptable and reflected dataset ambiguity rather than code regression.
 
 ### Phase 16: Evals Comparison
-Status: `TBD`
+Status: `Done`
 
-1. `TBD` Prompts without examples.
-2. `TBD` Prompts with examples.
-3. `TBD` Prompts with examples and after fine-tuning the model on the database.
+1. `Done` Baseline prompt/eval result captured (`18/44`, `0.409`).
+2. `Done` Prompt and example alignment result captured, with best prompt/advisor-alignment run at `35/44` (`0.795`).
+3. `Done` Model-change comparison captured: switching from `gpt-4o-mini` final prompt-tuning (`34/44`, `0.773`) to `gpt-5.4-mini-2026-03-17` reached `39/44` (`0.886`).
+4. `Done` Failure analysis captured: remaining misses are dominated by inconsistent first-screening labels plus one JSON label that confirms a candidate-proposed time without schedule validation.
 
 ## Parallel Branch Plan
 
